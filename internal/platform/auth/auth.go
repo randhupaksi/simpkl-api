@@ -39,7 +39,17 @@ func (m *TokenManager) Issue(userID, email string) (string, string, error) {
 }
 func (m *TokenManager) issue(userID, email, tokenType string, ttl time.Duration, secret []byte) (string, error) {
 	now := time.Now()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{UserID: userID, Email: email, TokenType: tokenType, RegisteredClaims: jwt.RegisteredClaims{Subject: userID, IssuedAt: jwt.NewNumericDate(now), ExpiresAt: jwt.NewNumericDate(now.Add(ttl))}})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
+		UserID:    userID,
+		Email:     email,
+		TokenType: tokenType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        fmt.Sprintf("%d-%s", now.UnixNano(), userID),
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+		},
+	})
 	return token.SignedString(secret)
 }
 func (m *TokenManager) ParseAccess(tokenString string) (*Claims, error) {
