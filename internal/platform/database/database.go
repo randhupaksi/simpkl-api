@@ -21,13 +21,14 @@ type Connection struct {
 
 func Open(ctx context.Context, cfg config.DatabaseConfig) (*Connection, error) {
 	dsnConfig := mysqlconfig.Config{
-		User:      cfg.User,
-		Passwd:    cfg.Password,
-		Net:       "tcp",
-		Addr:      fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		DBName:    cfg.Name,
-		ParseTime: true,
-		Loc:       time.Local,
+		User:                 cfg.User,
+		Passwd:               cfg.Password,
+		Net:                  "tcp",
+		Addr:                 fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		DBName:               cfg.Name,
+		AllowNativePasswords: true,
+		ParseTime:            true,
+		Loc:                  time.Local,
 	}
 	dsn := dsnConfig.FormatDSN()
 

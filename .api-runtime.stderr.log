@@ -1,0 +1,7 @@
+2026-07-27T11:44:13.234+0700	INFO	app/app.go:36	api server started	{"address": ":8080", "environment": "development"}
+2026-07-27T11:44:13.237+0700	ERROR	api/main.go:35	application stopped unexpectedly	{"error": "listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted."}
+main.main
+	C:/Users/MyBook Hype AMD/Documents/simpkl_citra_negara/simpkl-api/cmd/api/main.go:35
+runtime.main
+	C:/Program Files/Go/src/runtime/proc.go:285
+exit status 1

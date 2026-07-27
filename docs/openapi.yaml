@@ -1,0 +1,218 @@
+openapi: 3.0.3
+info:
+  title: SIMPKL Citra Negara API
+  version: 1.0.0
+  description: API back-office administrasi PKL SMK Citra Negara.
+servers:
+  - url: http://localhost:8080/api/v1
+tags:
+  - name: Auth
+  - name: Master Data
+  - name: Placements
+  - name: Documents
+  - name: Readiness
+  - name: Reports
+paths:
+  /health:
+    get:
+      summary: Status layanan API dan database
+      responses:
+        "200": {description: Layanan sehat}
+        "503": {description: Database tidak tersedia}
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login staf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login: {type: string}
+                password: {type: string, format: password}
+      responses:
+        "200": {description: Login berhasil}
+        "401": {description: Kredensial salah}
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotasi access dan refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200": {description: Token diperbarui}
+  /auth/logout:
+    post:
+      tags: [Auth]
+      security: [{bearerAuth: []}]
+      summary: Cabut refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200": {description: Logout berhasil}
+  /auth/me:
+    get:
+      tags: [Auth]
+      security: [{bearerAuth: []}]
+      summary: Profil, role, dan permission pengguna
+      responses:
+        "200": {description: Profil pengguna}
+  /periods:
+    get:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Daftar periode PKL
+      parameters: [{$ref: "#/components/parameters/Page"}, {$ref: "#/components/parameters/PerPage"}, {$ref: "#/components/parameters/Search"}]
+      responses: {"200": {description: Daftar periode}}
+    post:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Buat periode PKL
+      responses: {"201": {description: Periode dibuat}}
+  /students:
+    get:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Daftar siswa
+      responses: {"200": {description: Daftar siswa}}
+    post:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Tambah siswa
+      responses: {"201": {description: Siswa dibuat}}
+  /companies:
+    get:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Daftar perusahaan
+      responses: {"200": {description: Daftar perusahaan}}
+    post:
+      tags: [Master Data]
+      security: [{bearerAuth: []}]
+      summary: Tambah perusahaan
+      responses: {"201": {description: Perusahaan dibuat}}
+  /placements:
+    get:
+      tags: [Placements]
+      security: [{bearerAuth: []}]
+      summary: Daftar penempatan
+      responses: {"200": {description: Daftar penempatan}}
+    post:
+      tags: [Placements]
+      security: [{bearerAuth: []}]
+      summary: Buat penempatan dan validasi kuota
+      responses: {"201": {description: Penempatan dibuat}, "409": {description: Konflik penempatan atau kuota}}
+  /placements/{id}/transfer:
+    post:
+      tags: [Placements]
+      security: [{bearerAuth: []}]
+      summary: Tutup penempatan lama dan buat penempatan pengganti
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"201": {description: Perpindahan berhasil}}
+  /documents:
+    get:
+      tags: [Documents]
+      security: [{bearerAuth: []}]
+      summary: Daftar metadata dokumen
+      responses: {"200": {description: Daftar dokumen}}
+    post:
+      tags: [Documents]
+      security: [{bearerAuth: []}]
+      summary: Unggah dokumen privat
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, document_type_id, owner_type, owner_id]
+              properties:
+                file: {type: string, format: binary}
+                document_type_id: {type: string, format: uuid}
+                owner_type: {type: string, enum: [student, company, placement, period]}
+                owner_id: {type: string, format: uuid}
+                period_id: {type: string, format: uuid}
+      responses: {"201": {description: Dokumen diunggah}}
+  /documents/{id}/verify:
+    put:
+      tags: [Documents]
+      security: [{bearerAuth: []}]
+      summary: Verifikasi atau kembalikan dokumen untuk revisi
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Status dokumen diperbarui}}
+  /documents/{id}/download:
+    get:
+      tags: [Documents]
+      security: [{bearerAuth: []}]
+      summary: Unduh file privat
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: File dokumen}}
+  /readiness/recalculate:
+    post:
+      tags: [Readiness]
+      security: [{bearerAuth: []}]
+      summary: Hitung ulang checklist kesiapan administrasi
+      responses: {"200": {description: Checklist dihitung}}
+  /readiness/override:
+    post:
+      tags: [Readiness]
+      security: [{bearerAuth: []}]
+      summary: Berikan pengecualian kesiapan dengan alasan
+      responses: {"200": {description: Pengecualian diberikan}}
+  /reports/dashboard:
+    get:
+      tags: [Reports]
+      security: [{bearerAuth: []}]
+      summary: Ringkasan dashboard
+      responses: {"200": {description: Statistik dashboard}}
+  /reports/placements:
+    get:
+      tags: [Reports]
+      security: [{bearerAuth: []}]
+      summary: Rekap penempatan JSON, Excel, atau PDF
+      parameters:
+        - name: format
+          in: query
+          schema: {type: string, enum: [json, xlsx, pdf], default: json}
+      responses: {"200": {description: Laporan penempatan}}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    PerPage:
+      name: per_page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    Search:
+      name: search
+      in: query
+      schema: {type: string}
+  schemas:
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: {type: string}

@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 
 	"simpkl-api/internal/app"
@@ -16,12 +17,13 @@ import (
 )
 
 func main() {
-	name := required("SEED_ADMIN_NAME")
-	email := strings.ToLower(required("SEED_ADMIN_EMAIL"))
-	username := strings.ToLower(required("SEED_ADMIN_USERNAME"))
-	password := required("SEED_ADMIN_PASSWORD")
-	if len(password) < 12 {
-		log.Fatal("SEED_ADMIN_PASSWORD minimal 12 karakter")
+	settings := loadSettings()
+	name := required(settings, "SEED_ADMIN_NAME")
+	email := strings.ToLower(required(settings, "SEED_ADMIN_EMAIL"))
+	username := strings.ToLower(required(settings, "SEED_ADMIN_USERNAME"))
+	password := required(settings, "SEED_ADMIN_PASSWORD")
+	if len(password) < 8 {
+		log.Fatal("SEED_ADMIN_PASSWORD minimal 8 karakter")
 	}
 
 	ctx := context.Background()
@@ -52,7 +54,7 @@ func main() {
 			Name: name, Email: email, Username: username,
 			PasswordHash: hash, Status: "active",
 		}
-		if err := tx.Create(&user).Error; err != nil {
+		if err := tx.Omit("MajorID", "ClassID").Create(&user).Error; err != nil {
 			return err
 		}
 		return tx.Create(&roleentity.UserRole{UserID: user.ID, RoleID: role.ID}).Error
@@ -63,8 +65,25 @@ func main() {
 	log.Printf("super admin %s berhasil dibuat", email)
 }
 
-func required(key string) string {
-	value := strings.TrimSpace(os.Getenv(key))
+func loadSettings() *viper.Viper {
+	settings := viper.New()
+	settings.SetConfigName(".env")
+	settings.SetConfigType("env")
+	settings.AddConfigPath(".")
+	settings.AutomaticEnv()
+
+	if err := settings.ReadInConfig(); err != nil {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
+			log.Fatalf("read environment file: %v", err)
+		}
+	}
+
+	return settings
+}
+
+func required(settings *viper.Viper, key string) string {
+	value := strings.TrimSpace(settings.GetString(key))
 	if value == "" {
 		log.Fatalf("%s wajib diisi", key)
 	}

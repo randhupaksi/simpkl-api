@@ -1,0 +1,33 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-simpkl}
+      MYSQL_USER: ${DB_USER:-simpkl}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-simpkl_dev_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_dev_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - simpkl_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-root_dev_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./storage/private:/app/storage/private
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  simpkl_mysql_data:
