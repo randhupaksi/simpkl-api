@@ -3,21 +3,20 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
 	"github.com/spf13/viper"
-	"gorm.io/gorm"
 
 	"simpkl-api/internal/app"
-	roleentity "simpkl-api/internal/modules/roles/entity"
-	userentity "simpkl-api/internal/modules/users/entity"
-	platformauth "simpkl-api/internal/platform/auth"
+	seed "simpkl-api/internal/seed"
 )
 
 func main() {
 	settings := loadSettings()
+	if !settings.GetBool("SEED_ENABLED") {
+		log.Fatal("SEED_ENABLED=false; set SEED_ENABLED=true untuk menjalankan seeder")
+	}
 	name := required(settings, "SEED_ADMIN_NAME")
 	email := strings.ToLower(required(settings, "SEED_ADMIN_EMAIL"))
 	username := strings.ToLower(required(settings, "SEED_ADMIN_USERNAME"))
@@ -33,36 +32,14 @@ func main() {
 	}
 	defer dependencies.Close()
 
-	hash, err := platformauth.HashPassword(password)
-	if err != nil {
-		log.Fatalf("hash password: %v", err)
-	}
-	err = dependencies.Database.GORM.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var role roleentity.Role
-		if err := tx.Where("code = ?", "super_admin").First(&role).Error; err != nil {
-			return fmt.Errorf("super_admin role is missing; run migrations first: %w", err)
-		}
-		var user userentity.User
-		err := tx.Where("email = ? OR username = ?", email, username).First(&user).Error
-		if err == nil {
-			return fmt.Errorf("admin user already exists")
-		}
-		if err != gorm.ErrRecordNotFound {
-			return err
-		}
-		user = userentity.User{
-			Name: name, Email: email, Username: username,
-			PasswordHash: hash, Status: "active",
-		}
-		if err := tx.Omit("MajorID", "ClassID").Create(&user).Error; err != nil {
-			return err
-		}
-		return tx.Create(&roleentity.UserRole{UserID: user.ID, RoleID: role.ID}).Error
+	err = seed.Run(ctx, dependencies.Database.GORM, seed.Options{
+		RecordCount: settings.GetInt("SEED_RECORD_COUNT"), ResetLegacy: settings.GetBool("SEED_RESET_LEGACY"), AdminName: name,
+		AdminEmail: email, AdminUsername: username, AdminPassword: password,
 	})
 	if err != nil {
-		log.Fatalf("seed admin: %v", err)
+		log.Fatalf("seed data: %v", err)
 	}
-	log.Printf("super admin %s berhasil dibuat", email)
+	log.Printf("seeder berhasil: dataset PKL 2026/2027 siap, admin %s siap digunakan", email)
 }
 
 func loadSettings() *viper.Viper {
@@ -71,6 +48,9 @@ func loadSettings() *viper.Viper {
 	settings.SetConfigType("env")
 	settings.AddConfigPath(".")
 	settings.AutomaticEnv()
+	settings.SetDefault("SEED_ENABLED", false)
+	settings.SetDefault("SEED_RECORD_COUNT", 5)
+	settings.SetDefault("SEED_RESET_LEGACY", false)
 
 	if err := settings.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError

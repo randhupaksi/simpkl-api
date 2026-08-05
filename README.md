@@ -14,7 +14,7 @@ Go, Gin, GORM, MySQL, JWT, Viper, Zap, Excelize, Swagger UI, dan SQL migration.
    `mysql://simpkl:simpkl_dev_password@tcp(localhost:3306)/simpkl?multiStatements=true`
 4. Jalankan migration:
    `go run github.com/golang-migrate/migrate/v4/cmd/migrate -path migrations -database "$env:DATABASE_URL" up`
-5. Isi variabel `SEED_ADMIN_*`, lalu jalankan `go run ./cmd/seed`.
+5. Pastikan migration selesai, `SEED_ENABLED=true`, dan isi variabel `SEED_ADMIN_*`, lalu jalankan `go run ./cmd/seed`.
 6. Jalankan API: `go run ./cmd/api`.
 
 Health check tersedia di `GET /health`, API menggunakan prefix `/api/v1`, dan dokumentasi interaktif tersedia di `/swagger/index.html`.
@@ -31,7 +31,7 @@ go build -o ./bin/simpkl-api.exe ./cmd/api
 ## Struktur
 
 - `cmd/api`: entrypoint HTTP.
-- `cmd/seed`: bootstrap super admin tanpa kredensial hardcoded.
+- `cmd/seed`: bootstrap super admin dan fixture sintetis seluruh domain untuk PKL SMK Citra Negara 2026/2027 tanpa kredensial hardcoded. Dataset mencakup PPLG, TJKT, Pemasaran, MPLB, DKV, mitra dummy sekitar Depok, penempatan aktif, dokumen, readiness, arsip, dan audit log. Seeder idempotent dengan jumlah data yang mengikuti kebutuhan masing-masing konteks.
 - `internal/app`: composition root dan lifecycle server.
 - `internal/modules`: domain aplikasi.
 - `internal/shared/crud`: pola repository–service–handler yang digunakan ulang.
