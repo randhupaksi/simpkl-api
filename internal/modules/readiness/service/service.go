@@ -85,11 +85,17 @@ func (s *Service) Recalculate(
 		if err == nil {
 			check.ID = existing.ID
 			check.CreatedAt = existing.CreatedAt
-			if err := tx.Model(&existing).Select("*").Omit("id", "created_at", "deleted_at").Updates(check).Error; err != nil {
+			if err := tx.Model(&existing).Select("*").Omit("id", "created_at", "deleted_at", "PlacementID").Updates(check).Error; err != nil {
+				return err
+			}
+			if err := savePlacementReference(tx, existing.ID, check.PlacementID); err != nil {
 				return err
 			}
 		} else if err == gorm.ErrRecordNotFound {
-			if err := tx.Create(check).Error; err != nil {
+			if err := tx.Omit("PlacementID").Create(check).Error; err != nil {
+				return err
+			}
+			if err := savePlacementReference(tx, check.ID, check.PlacementID); err != nil {
 				return err
 			}
 		} else {
@@ -104,6 +110,16 @@ func (s *Service) Recalculate(
 		return nil
 	})
 	return check, err
+}
+
+func savePlacementReference(tx *gorm.DB, readinessID, placementID string) error {
+	var value any
+	if placementID != "" {
+		value = placementID
+	}
+	return tx.Model(&entity.Readiness{}).
+		Where("id = ?", readinessID).
+		Update("placement_id", value).Error
 }
 
 func (s *Service) Override(
