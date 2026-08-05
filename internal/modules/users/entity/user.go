@@ -13,8 +13,8 @@ type User struct {
 	Username     string     `gorm:"size:80;uniqueIndex;not null" json:"username" validate:"required,max=80"`
 	PasswordHash string     `gorm:"size:255;not null" json:"-"`
 	Password     string     `gorm:"-" json:"password,omitempty" validate:"omitempty,min=8,max=72"`
-	MajorID      string     `gorm:"type:char(36);index" json:"major_id" validate:"omitempty,uuid"`
-	ClassID      string     `gorm:"type:char(36);index" json:"class_id" validate:"omitempty,uuid"`
+	MajorID      string     `gorm:"type:char(36);index;default:null" json:"major_id" validate:"omitempty,uuid"`
+	ClassID      string     `gorm:"type:char(36);index;default:null" json:"class_id" validate:"omitempty,uuid"`
 	Status       string     `gorm:"size:30;not null;default:active;index" json:"status" validate:"required,oneof=active inactive locked"`
 	LastLoginAt  *time.Time `gorm:"type:datetime" json:"last_login_at"`
 	RoleIDs      []string   `gorm:"-" json:"role_ids"`

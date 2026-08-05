@@ -136,8 +136,12 @@ func (s *Service) Verify(ctx context.Context, id, status, verifierID, notes stri
 		return nil, invalid("INVALID_DOCUMENT_STATUS", "Status verifikasi dokumen tidak valid")
 	}
 	now := time.Now()
+	verifiedBy := any(verifierID)
+	if strings.TrimSpace(verifierID) == "" {
+		verifiedBy = nil
+	}
 	if err := s.db.WithContext(ctx).Model(&entity.Document{}).Where("id = ?", id).Updates(map[string]any{
-		"status": status, "verified_by": verifierID, "verified_at": now, "notes": notes,
+		"status": status, "verified_by": verifiedBy, "verified_at": now, "notes": notes,
 	}).Error; err != nil {
 		return nil, err
 	}

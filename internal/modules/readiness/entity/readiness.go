@@ -6,7 +6,7 @@ type Readiness struct {
 	types.BaseModel
 	StudentID               string  `gorm:"type:char(36);not null;uniqueIndex:idx_readiness_student_period" json:"student_id" validate:"required,uuid"`
 	PeriodID                string  `gorm:"type:char(36);not null;uniqueIndex:idx_readiness_student_period" json:"period_id" validate:"required,uuid"`
-	PlacementID             string  `gorm:"type:char(36);index" json:"placement_id" validate:"omitempty,uuid"`
+	PlacementID             string  `gorm:"type:char(36);index;default:null" json:"placement_id" validate:"omitempty,uuid"`
 	DataComplete            bool    `json:"data_complete"`
 	CompanyAssigned         bool    `json:"company_assigned"`
 	ContactAvailable        bool    `json:"contact_available"`

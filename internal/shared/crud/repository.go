@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"gorm.io/gorm"
@@ -102,12 +103,39 @@ func (r *GormRepository[T]) Update(ctx context.Context, id string, input *T) (*T
 	}
 	if err := r.db.WithContext(ctx).
 		Model(existing).
-		Select("*").
-		Omit("id", "created_at", "deleted_at").
-		Updates(input).Error; err != nil {
+		Updates(nullableForeignKeyUpdates(ctx, r.db, input, "id", "created_at", "deleted_at")).Error; err != nil {
 		return nil, err
 	}
 	return r.Get(ctx, id)
+}
+
+func nullableForeignKeyUpdates[T any](ctx context.Context, db *gorm.DB, input *T, omitted ...string) map[string]any {
+	statement := db.Session(&gorm.Session{}).Statement
+	_ = statement.Parse(input)
+	value := reflect.ValueOf(input)
+	for value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	omit := make(map[string]struct{}, len(omitted))
+	for _, field := range omitted {
+		omit[field] = struct{}{}
+	}
+	updates := make(map[string]any)
+	for _, field := range statement.Schema.Fields {
+		if field.DBName == "" {
+			continue
+		}
+		if _, exists := omit[field.DBName]; exists {
+			continue
+		}
+		fieldValue, zero := field.ValueOf(ctx, value)
+		if zero && (strings.HasSuffix(field.DBName, "_id") || field.DBName == "verified_by") && !field.NotNull {
+			updates[field.DBName] = nil
+			continue
+		}
+		updates[field.DBName] = fieldValue
+	}
+	return updates
 }
 
 func (r *GormRepository[T]) Delete(ctx context.Context, id string) error {

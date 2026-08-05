@@ -11,8 +11,8 @@ type Document struct {
 	DocumentTypeID string     `gorm:"type:char(36);not null;index" json:"document_type_id" validate:"required,uuid"`
 	OwnerType      string     `gorm:"size:30;not null;index" json:"owner_type" validate:"required,oneof=student company placement period"`
 	OwnerID        string     `gorm:"type:char(36);not null;index" json:"owner_id" validate:"required,uuid"`
-	PeriodID       string     `gorm:"type:char(36);index" json:"period_id" validate:"omitempty,uuid"`
-	PlacementID    string     `gorm:"type:char(36);index" json:"placement_id" validate:"omitempty,uuid"`
+	PeriodID       string     `gorm:"type:char(36);index;default:null" json:"period_id" validate:"omitempty,uuid"`
+	PlacementID    string     `gorm:"type:char(36);index;default:null" json:"placement_id" validate:"omitempty,uuid"`
 	Number         string     `gorm:"size:100;index" json:"number"`
 	OriginalName   string     `gorm:"size:255;not null" json:"original_name" validate:"required,max=255"`
 	StoredName     string     `gorm:"size:255;not null" json:"stored_name" validate:"required,max=255"`
@@ -24,7 +24,7 @@ type Document struct {
 	ValidUntil     *time.Time `gorm:"index" json:"valid_until"`
 	Status         string     `gorm:"size:40;not null;default:uploaded;index" json:"status" validate:"required,oneof=draft uploaded pending valid revision_required rejected expired superseded"`
 	Version        int        `gorm:"not null;default:1" json:"version" validate:"min=1"`
-	VerifiedBy     string     `gorm:"type:char(36);index" json:"verified_by"`
+	VerifiedBy     string     `gorm:"type:char(36);index;default:null" json:"verified_by"`
 	VerifiedAt     *time.Time `json:"verified_at"`
 	Notes          string     `gorm:"type:text" json:"notes"`
 }

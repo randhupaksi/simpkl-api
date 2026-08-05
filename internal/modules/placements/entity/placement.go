@@ -11,9 +11,9 @@ type Placement struct {
 	PeriodID            string    `gorm:"type:char(36);not null;index" json:"period_id" validate:"required,uuid"`
 	StudentID           string    `gorm:"type:char(36);not null;index" json:"student_id" validate:"required,uuid"`
 	CompanyID           string    `gorm:"type:char(36);not null;index" json:"company_id" validate:"required,uuid"`
-	CompanyContactID    string    `gorm:"type:char(36);index" json:"company_contact_id" validate:"omitempty,uuid"`
-	SupervisorID        string    `gorm:"type:char(36);index" json:"supervisor_id" validate:"omitempty,uuid"`
-	PreviousPlacementID string    `gorm:"type:char(36);index" json:"previous_placement_id" validate:"omitempty,uuid"`
+	CompanyContactID    string    `gorm:"type:char(36);index;default:null" json:"company_contact_id" validate:"omitempty,uuid"`
+	SupervisorID        string    `gorm:"type:char(36);index;default:null" json:"supervisor_id" validate:"omitempty,uuid"`
+	PreviousPlacementID string    `gorm:"type:char(36);index;default:null" json:"previous_placement_id" validate:"omitempty,uuid"`
 	Division            string    `gorm:"size:120" json:"division"`
 	Position            string    `gorm:"size:120" json:"position"`
 	WorkSystem          string    `gorm:"size:30;not null" json:"work_system" validate:"required,oneof=wfo wfh hybrid company_policy"`
