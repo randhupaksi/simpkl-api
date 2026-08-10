@@ -10,6 +10,7 @@ tags:
   - name: Master Data
   - name: Placements
   - name: Documents
+  - name: Document Automation
   - name: Readiness
   - name: Reports
 paths:
@@ -186,6 +187,132 @@ paths:
           in: query
           schema: {type: string, enum: [json, xlsx, pdf], default: json}
       responses: {"200": {description: Laporan penempatan}}
+  /document-automation/profile:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Ambil identitas institusi untuk kop surat
+      responses: {"200": {description: Profil institusi}}
+    put:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Perbarui identitas institusi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SchoolProfile"}
+      responses: {"200": {description: Profil diperbarui}}
+  /document-automation/signatories:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Daftar pejabat penandatangan
+      responses: {"200": {description: Daftar penandatangan}}
+    post:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Tambah pejabat penandatangan
+      responses: {"201": {description: Penandatangan dibuat}}
+  /document-automation/signatories/{id}:
+    put:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Perbarui pejabat penandatangan
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Penandatangan diperbarui}}
+    delete:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Hapus pejabat penandatangan
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Penandatangan dihapus}}
+  /document-automation/templates:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Daftar seluruh versi template
+      responses: {"200": {description: Daftar template}}
+    post:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Buat template dokumen
+      responses: {"201": {description: Template dibuat}}
+  /document-automation/templates/{id}:
+    put:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Buat versi baru dari template
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Versi template dibuat}}
+  /document-automation/templates/{id}/active:
+    put:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Aktifkan atau nonaktifkan versi template
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Status template diperbarui}}
+  /document-automation/preview:
+    post:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Validasi sumber data dan hitung estimasi file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AutomationPreviewRequest"}
+      responses:
+        "200": {description: Hasil validasi dan data pratinjau}
+  /document-automation/generate:
+    post:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Buat surat DOCX/PDF, rekap XLSX, dan paket ZIP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AutomationGenerateRequest"}
+      responses:
+        "201": {description: Batch selesai dibuat}
+        "422": {description: Data resmi belum lengkap}
+  /document-automation/batches:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Riwayat batch generation
+      responses: {"200": {description: Daftar batch}}
+  /document-automation/batches/{id}:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Detail batch dan seluruh file
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: Detail batch}}
+  /document-automation/batches/{id}/download:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Unduh paket ZIP privat
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses:
+        "200":
+          description: Arsip ZIP
+          content: {application/zip: {schema: {type: string, format: binary}}}
+  /document-automation/documents:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Riwayat file yang dihasilkan
+      responses: {"200": {description: Daftar file}}
+  /document-automation/documents/{id}/download:
+    get:
+      tags: [Document Automation]
+      security: [{bearerAuth: []}]
+      summary: Unduh satu file privat
+      parameters: [{$ref: "#/components/parameters/ID"}]
+      responses: {"200": {description: File DOCX, PDF, atau XLSX}}
 components:
   securitySchemes:
     bearerAuth:
@@ -211,6 +338,52 @@ components:
       in: query
       schema: {type: string}
   schemas:
+    SchoolProfile:
+      type: object
+      required: [institution_name, address]
+      properties:
+        institution_name: {type: string}
+        institution_type: {type: string}
+        npsn: {type: string}
+        address: {type: string}
+        city: {type: string}
+        province: {type: string}
+        phone: {type: string}
+        email: {type: string, format: email}
+        website: {type: string, format: uri}
+        letterhead_tagline: {type: string}
+        timezone: {type: string, default: Asia/Jakarta}
+    AutomationFilters:
+      type: object
+      properties:
+        period_id: {type: string, format: uuid}
+        class_id: {type: string, format: uuid}
+        major_id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        supervisor_id: {type: string, format: uuid}
+        placement_ids:
+          type: array
+          items: {type: string, format: uuid}
+    AutomationPreviewRequest:
+      type: object
+      required: [filters, template_codes, formats]
+      properties:
+        filters: {$ref: "#/components/schemas/AutomationFilters"}
+        template_codes:
+          type: array
+          items: {type: string}
+        formats:
+          type: array
+          items: {type: string, enum: [docx, pdf]}
+    AutomationGenerateRequest:
+      allOf:
+        - {$ref: "#/components/schemas/AutomationPreviewRequest"}
+        - type: object
+          required: [letter_date]
+          properties:
+            name: {type: string}
+            signatory_id: {type: string, format: uuid}
+            letter_date: {type: string, format: date-time}
     RefreshRequest:
       type: object
       required: [refresh_token]

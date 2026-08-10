@@ -7,6 +7,7 @@ Kelompok permission:
 - `period.*`, `major.*`, `class.*`, `student.*`
 - `company.*`, `supervisor.*`, `placement.*`
 - `document.*`, `document_type.*`, `readiness.*`
+- `automation.view`, `automation.generate`, `automation.download`, `automation.manage`
 - `report.view`, `archive.view`, `audit.view`
 - `user.*`, `role.*`, `permission.*`
 

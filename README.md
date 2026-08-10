@@ -32,6 +32,10 @@ The backend exposes the following business areas:
 - **Private document management** — document types, multipart upload, metadata,
   verification, expiry information, secure download, version numbering, and
   superseding previous documents.
+- **Document automation** — configurable institution identity, signatories,
+  versioned letter templates, collision-safe numbering, completeness previews,
+  individual and batch generation, DOCX/PDF letters, XLSX recaps, ZIP packages,
+  immutable data snapshots, checksums, and generation history.
 - **Reporting** — placement dashboard data and styled JSON, Excel, and PDF
   reports with human-readable status labels.
 - **Archiving** — period snapshots and administrative archive records.
@@ -49,6 +53,8 @@ Register students, workplace partners, contacts, and supervisors
 Create and validate student placements
         ↓
 Upload and verify required administrative documents
+        ↓
+Validate source data and generate official letters/recaps
         ↓
 Recalculate readiness and resolve outstanding requirements
         ↓
@@ -76,7 +82,9 @@ previous_placement_id relationship.
 | Logging | Uber Zap |
 | API documentation | OpenAPI YAML and Swagger UI |
 | Spreadsheet export | Excelize |
-| PDF export | Internal report generation under internal/platform/report |
+| DOCX generation | Internal standards-compliant OOXML generator |
+| PDF export | Internal A4 letter and landscape report generators |
+| Batch packaging | ZIP archives stored in private storage |
 | Identifiers | UUID |
 | Schema management | Versioned SQL migrations |
 | Local infrastructure | Docker Compose with MySQL |
@@ -205,6 +213,7 @@ access token unless stated otherwise.
 | Supervisors | CRUD /supervisors |
 | Placements | CRUD /placements, POST /placements/{id}/transfer |
 | Documents | CRUD metadata, upload, verification, secure download, document types |
+| Document automation | Profile/signatory/template management, preview, generate, history, DOCX/PDF/XLSX/ZIP download |
 | Readiness | list, recalculate, override |
 | Reports | dashboard and placement reports in JSON/XLSX/PDF |
 | Archives | list, create, and detail |
@@ -240,6 +249,9 @@ periods → placements ← students
 companies → company_contacts
 companies → placements ← supervisors
 placements → documents
+placements → generated_documents ← document_templates
+document_generation_batches → generated_documents
+school_profiles + signatories → generated letter identity
 students + periods → administrative_readiness
 periods → archives
 users → user_roles → roles → role_permissions → permissions
@@ -270,13 +282,24 @@ shared or production environment.
 
 ### Apply migrations
 
+By default, the API automatically applies embedded versioned migrations before
+it starts listening. The SQL files are compiled into the API binary, and the
+runner uses `schema_migrations` plus a MySQL advisory lock to prevent concurrent
+application by multiple API instances.
+
+```text
+MIGRATIONS_AUTO_APPLY=true
+```
+
+For deployments that use a separate migration job, set
+`MIGRATIONS_AUTO_APPLY=false` on the API and run the existing migration CLI.
 The project uses a MySQL URL compatible with golang-migrate:
 
 ~~~text
 mysql://user:password@tcp(localhost:3306)/simpkl?multiStatements=true
 ~~~
 
-Then run:
+Then run the separate migration job:
 
 ~~~powershell
 go run github.com/golang-migrate/migrate/v4/cmd/migrate -path migrations -database "$env:DATABASE_URL" up
@@ -286,9 +309,10 @@ go run github.com/golang-migrate/migrate/v4/cmd/migrate -path migrations -databa
 
 The seeder creates a realistic, idempotent PKL dataset for development. It
 includes periods, majors, classes, students, workplace partners, contacts,
-supervisors, placements, documents, readiness records, archives, RBAC data, and
-an administrative user. Record counts are context-aware rather than forcing the
-same number into every table.
+supervisors, placements, uploaded documents, automation templates, an
+institution profile, a default signatory, readiness records, archives, RBAC
+data, and an administrative user. Record counts are context-aware rather than
+forcing the same number into every table.
 
 Configure seed behavior in .env:
 
@@ -323,6 +347,37 @@ Useful URLs:
 - Versioned health: http://localhost:8080/api/v1/health
 - OpenAPI file: http://localhost:8080/openapi.yaml
 - Swagger UI: http://localhost:8080/swagger/index.html
+
+## Document automation workflow
+
+The automation engine is deterministic: it only merges validated database data
+into an active template. It does not invent names, dates, addresses, positions,
+or official decisions.
+
+1. Complete the institution profile and select a default active signatory.
+2. Review the seeded templates or create a new template/version using supported
+   placeholders.
+3. Select a period and optionally narrow by class, major, company, supervisor,
+   or a single placement.
+4. Preview completeness. Generation is blocked when required official data is
+   missing.
+5. Generate DOCX/PDF letters and an XLSX recap. The API stores every file in
+   private storage and creates one ZIP package per batch.
+6. Download the package or individual files from generation history.
+
+Each generated record stores the template code/version, official number,
+requesting user, data snapshot, SHA-256 checksum, storage metadata, and creation
+time. Editing master data later therefore does not rewrite historical output.
+Letter sequences are scoped by template, year, and month and incremented in a
+database transaction.
+
+The default templates provide an introduction/application letter, placement
+letter, supervisor assignment letter, parent/guardian consent letter, and
+placement recap workbook. Template content and institution identity remain
+configurable so the product is not tied to a particular school.
+
+See [docs/document-automation.md](docs/document-automation.md) for placeholders,
+security behavior, and the generation lifecycle.
 
 ## Environment variables
 
