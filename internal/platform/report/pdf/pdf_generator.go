@@ -78,14 +78,14 @@ func renderPage(title string, headers []string, rows [][]any, widths []float64, 
 	const rowHeight = 25.0
 	var content strings.Builder
 	content.WriteString("q 0.043 0.357 0.263 sc 0 510 842 85 re f Q\n")
-	text(&content, left, 558, 20, "1 1 1", "SIMPKL | SMK CITRA NEGARA")
+	text(&content, left, 558, 20, "1 1 1", "SIMPkl | PRACTICAL WORK PLACEMENT")
 	text(&content, left, 536, 13, "0.86 0.99 0.91", title)
 	text(&content, left, 518, 9, "0.82 0.91 0.86", fmt.Sprintf("Laporan penempatan PKL  |  Dibuat %s  |  Total data: %d", time.Now().Format("02 January 2006 15:04"), len(rows)))
 
 	captionY := tableTop + 12
 	text(&content, left, captionY, 9, "0.20 0.28 0.25", fmt.Sprintf("Data penempatan%s", pageLabel(page, pageCount)))
 	drawTable(&content, left, tableTop, headers, rows, widths, headerHeight, rowHeight)
-	text(&content, left, 28, 8, "0.39 0.45 0.42", "Dokumen resmi SIMPKL - SMK Citra Negara")
+	text(&content, left, 28, 8, "0.39 0.45 0.42", "Official SIMPkl practical work placement report")
 	textRight(&content, 817, 28, 8, "0.39 0.45 0.42", fmt.Sprintf("Halaman %d dari %d", page, pageCount))
 	return content.String()
 }

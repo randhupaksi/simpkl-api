@@ -333,7 +333,7 @@ func seedPeriods(tx *gorm.DB, count int) ([]periodentity.Period, error) {
 	}
 	for i := range periods {
 		definition := periodDefinitions[i%len(periodDefinitions)]
-		item := periodentity.Period{Name: definition.name, AcademicYear: definition.academicYear, Semester: definition.semester, StartDate: definition.start, EndDate: definition.end, Cohort: definition.cohort, Status: definition.status, Notes: "Periode PKL sintetis SMK Citra Negara, Beji, Depok."}
+		item := periodentity.Period{Name: definition.name, AcademicYear: definition.academicYear, Semester: definition.semester, StartDate: definition.start, EndDate: definition.end, Cohort: definition.cohort, Status: definition.status, Notes: "Synthetic practical work placement period for local development and demonstration."}
 		if err := tx.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed period %d: %w", i+1, err)
 		}
