@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	CORS     CORSConfig
-	Storage  StorageConfig
-	Log      LogConfig
+	App        AppConfig
+	Database   DatabaseConfig
+	Migrations MigrationsConfig
+	JWT        JWTConfig
+	CORS       CORSConfig
+	Storage    StorageConfig
+	Log        LogConfig
 }
 
 type AppConfig struct {
@@ -34,6 +35,10 @@ type DatabaseConfig struct {
 	MaxOpenConnections    int
 	MaxIdleConnections    int
 	ConnectionMaxLifetime time.Duration
+}
+
+type MigrationsConfig struct {
+	AutoApply bool
 }
 
 type JWTConfig struct {
@@ -89,6 +94,7 @@ func Load() (*Config, error) {
 			MaxIdleConnections:    v.GetInt("DB_MAX_IDLE_CONNECTIONS"),
 			ConnectionMaxLifetime: time.Duration(v.GetInt("DB_CONNECTION_MAX_LIFETIME")) * time.Second,
 		},
+		Migrations: MigrationsConfig{AutoApply: v.GetBool("MIGRATIONS_AUTO_APPLY")},
 		JWT: JWTConfig{
 			AccessSecret:  v.GetString("JWT_ACCESS_SECRET"),
 			RefreshSecret: v.GetString("JWT_REFRESH_SECRET"),
@@ -168,6 +174,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("DB_MAX_OPEN_CONNECTIONS", 25)
 	v.SetDefault("DB_MAX_IDLE_CONNECTIONS", 10)
 	v.SetDefault("DB_CONNECTION_MAX_LIFETIME", 300)
+	v.SetDefault("MIGRATIONS_AUTO_APPLY", true)
 	v.SetDefault("JWT_ACCESS_TTL_MINUTES", 15)
 	v.SetDefault("JWT_REFRESH_TTL_HOURS", 168)
 	v.SetDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173")

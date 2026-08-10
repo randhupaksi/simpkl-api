@@ -43,6 +43,13 @@ func BuildDependencies(ctx context.Context) (*Dependencies, error) {
 		_ = log.Sync()
 		return nil, err
 	}
+	if cfg.Migrations.AutoApply {
+		if err := database.RunMigrations(ctx, connection.SQL); err != nil {
+			_ = connection.Close()
+			_ = log.Sync()
+			return nil, fmt.Errorf("apply database migrations: %w", err)
+		}
+	}
 
 	fileStorage, err := storage.NewLocal(cfg.Storage.Path)
 	if err != nil {
