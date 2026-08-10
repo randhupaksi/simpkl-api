@@ -25,6 +25,7 @@ import (
 	"simpkl-api/internal/modules/classes"
 	"simpkl-api/internal/modules/companies"
 	"simpkl-api/internal/modules/companycontacts"
+	"simpkl-api/internal/modules/documentautomation"
 	"simpkl-api/internal/modules/documents"
 	"simpkl-api/internal/modules/majors"
 	"simpkl-api/internal/modules/periods"
@@ -101,6 +102,7 @@ func NewRouter(dependencies *Dependencies) *gin.Engine {
 	permissions.Register(protected, dependencies.Database.GORM, dependencies.Auditor, require)
 	placements.Register(protected, dependencies.Database.GORM, dependencies.Auditor, require)
 	documents.Register(protected, dependencies.Database.GORM, dependencies.Storage, dependencies.Auditor, require)
+	documentautomation.Register(protected, dependencies.Database.GORM, dependencies.Storage, dependencies.Auditor, require)
 	readiness.Register(protected, dependencies.Database.GORM, dependencies.Auditor, require)
 	archives.Register(protected, dependencies.Database.GORM, dependencies.Auditor, require)
 	reports.Register(protected, dependencies.Database.GORM, require)
