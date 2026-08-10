@@ -3,6 +3,7 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	classentity "simpkl-api/internal/modules/classes/entity"
 	companyentity "simpkl-api/internal/modules/companies/entity"
 	contactentity "simpkl-api/internal/modules/companycontacts/entity"
+	automationentity "simpkl-api/internal/modules/documentautomation/entity"
 	documententity "simpkl-api/internal/modules/documents/entity"
 	majorentity "simpkl-api/internal/modules/majors/entity"
 	periodentity "simpkl-api/internal/modules/periods/entity"
@@ -101,6 +103,9 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 		if err != nil {
 			return err
 		}
+		if err := seedDocumentAutomation(tx); err != nil {
+			return err
+		}
 		if err := seedDocuments(tx, documentTypes, periods, placements, users, 30); err != nil {
 			return err
 		}
@@ -112,6 +117,61 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 		}
 		return seedAuditLogs(tx, users[0], periods, 30)
 	})
+}
+
+func seedDocumentAutomation(tx *gorm.DB) error {
+	profile := automationentity.SchoolProfile{
+		InstitutionName: "SMK Nusantara Teknologi", InstitutionType: "Sekolah Menengah Kejuruan",
+		NPSN: "20260001", Address: "Jl. Pendidikan No. 10", District: "Sukmajaya",
+		City: "Depok", Province: "Jawa Barat", PostalCode: "16412", Phone: "(021) 7700000",
+		Email: "info@smknusantarateknologi.sch.id", Website: "https://smknusantarateknologi.sch.id",
+		LetterheadTagline: "Terampil, Profesional, dan Berintegritas", Timezone: "Asia/Jakarta",
+	}
+	var existingProfile automationentity.SchoolProfile
+	if err := tx.First(&existingProfile).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		if err := tx.Create(&profile).Error; err != nil {
+			return fmt.Errorf("seed school profile: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("find school profile: %w", err)
+	} else if existingProfile.InstitutionName == "Nama Institusi" {
+		profile.ID = existingProfile.ID
+		if err := tx.Model(&existingProfile).Updates(profile).Error; err != nil {
+			return fmt.Errorf("update placeholder school profile: %w", err)
+		}
+	}
+
+	signatory := automationentity.Signatory{Name: "Drs. Ahmad Fauzi, M.Pd.", Title: "Kepala Sekolah", EmployeeNumber: "19750512 200501 1 001", RoleCode: "principal", IsDefault: true, Status: "active"}
+	var existingSignatory automationentity.Signatory
+	if err := tx.Where("is_default = ?", true).Order("created_at ASC").First(&existingSignatory).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		if err := tx.Create(&signatory).Error; err != nil {
+			return fmt.Errorf("seed signatory: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("find default signatory: %w", err)
+	} else if existingSignatory.Name == "Nama Kepala Sekolah" {
+		if err := tx.Model(&existingSignatory).Updates(map[string]any{
+			"name": signatory.Name, "title": signatory.Title,
+			"employee_number": signatory.EmployeeNumber, "role_code": signatory.RoleCode,
+			"is_default": true, "status": signatory.Status,
+		}).Error; err != nil {
+			return fmt.Errorf("update placeholder signatory: %w", err)
+		}
+	}
+
+	templates := []automationentity.DocumentTemplate{
+		{Code: "introduction_letter", Name: "Surat Pengantar PKL", Category: "letter", SubjectTemplate: "Permohonan Praktik Kerja Lapangan", BodyTemplate: "Dengan hormat,\n\nDalam rangka pelaksanaan program Praktik Kerja Lapangan (PKL) tahun ajaran {{academic_year}}, kami memohon kesediaan {{company_name}} untuk menerima peserta didik berikut:\n\nNama: {{student_name}}\nNIS: {{student_nis}}\nKelas: {{class_name}}\nProgram Keahlian: {{major_name}}\nPeriode: {{placement_start}} sampai {{placement_end}}\n\nKami berharap peserta didik tersebut memperoleh kesempatan belajar dan pengalaman kerja sesuai bidang keahliannya. Atas perhatian dan kerja sama yang baik, kami sampaikan terima kasih.", NumberPattern: "{{sequence}}/PKL/{{month_roman}}/{{year}}", Version: 1, IsActive: true},
+		{Code: "placement_letter", Name: "Surat Keterangan Penempatan", Category: "letter", SubjectTemplate: "Keterangan Penempatan Praktik Kerja Lapangan", BodyTemplate: "Yang bertanda tangan di bawah ini menerangkan bahwa:\n\nNama: {{student_name}}\nNIS: {{student_nis}}\nKelas: {{class_name}}\nProgram Keahlian: {{major_name}}\n\ntelah ditempatkan untuk melaksanakan Praktik Kerja Lapangan di {{company_name}}, {{company_address}}, pada bagian {{placement_division}} sebagai {{placement_position}} selama {{placement_start}} sampai {{placement_end}}.\n\nSurat keterangan ini dibuat untuk dipergunakan sebagaimana mestinya.", NumberPattern: "{{sequence}}/KET-PKL/{{month_roman}}/{{year}}", Version: 1, IsActive: true},
+		{Code: "supervisor_assignment", Name: "Surat Tugas Guru Pembimbing", Category: "letter", SubjectTemplate: "Penugasan Guru Pembimbing PKL", BodyTemplate: "Dengan ini menugaskan:\n\nNama: {{supervisor_name}}\nNomor Pegawai: {{supervisor_employee_number}}\nJabatan: {{supervisor_position}}\n\nuntuk melaksanakan pembimbingan, pemantauan, dan evaluasi Praktik Kerja Lapangan bagi peserta didik {{student_name}} dari kelas {{class_name}} yang ditempatkan di {{company_name}} selama {{placement_start}} sampai {{placement_end}}.\n\nDemikian surat tugas ini diberikan untuk dilaksanakan dengan penuh tanggung jawab.", NumberPattern: "{{sequence}}/ST-PKL/{{month_roman}}/{{year}}", Version: 1, IsActive: true},
+		{Code: "parent_consent", Name: "Surat Persetujuan Orang Tua", Category: "letter", SubjectTemplate: "Persetujuan Mengikuti Praktik Kerja Lapangan", BodyTemplate: "Saya yang bertanda tangan di bawah ini:\n\nNama Orang Tua/Wali: {{parent_name}}\nOrang tua/wali dari: {{student_name}}\nKelas: {{class_name}}\nProgram Keahlian: {{major_name}}\n\ndengan ini menyetujui peserta didik tersebut mengikuti Praktik Kerja Lapangan di {{company_name}} pada {{placement_start}} sampai {{placement_end}}. Kami memahami dan bersedia mendukung ketentuan pelaksanaan PKL yang berlaku.\n\nDemikian surat persetujuan ini dibuat dengan sebenarnya.", NumberPattern: "{{sequence}}/IZIN-PKL/{{month_roman}}/{{year}}", Version: 1, IsActive: true},
+		{Code: "placement_recap", Name: "Rekap Penempatan PKL", Category: "spreadsheet", SubjectTemplate: "Rekap Penempatan Praktik Kerja Lapangan", BodyTemplate: "Rekap penempatan peserta didik berdasarkan periode dan filter yang dipilih.", NumberPattern: "REKAP-PKL-{{year}}", Version: 1, IsActive: true},
+	}
+	for i := range templates {
+		if err := tx.Where("code = ? AND version = ?", templates[i].Code, templates[i].Version).FirstOrCreate(&templates[i]).Error; err != nil {
+			return fmt.Errorf("seed document automation template %s: %w", templates[i].Code, err)
+		}
+	}
+	return nil
 }
 
 // cleanupLegacyFixtures hanya menghapus marker yang dibuat oleh seeder awal.
