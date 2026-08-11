@@ -37,8 +37,14 @@ func (s *Service) Login(
 	login, password, ipAddress, userAgent string,
 ) (*authentity.AuthResult, error) {
 	user, err := s.repository.FindByLogin(ctx, strings.TrimSpace(login))
-	if err != nil || platformauth.ComparePassword(user.PasswordHash, password) != nil {
-		return nil, unauthorized("Email/username atau password salah", err)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, unauthorized("Email/username atau password salah", err)
+		}
+		return nil, err
+	}
+	if platformauth.ComparePassword(user.PasswordHash, password) != nil {
+		return nil, unauthorized("Email/username atau password salah", nil)
 	}
 	result, err := s.issue(ctx, user.ID, user.Email, ipAddress, userAgent)
 	if err != nil {
