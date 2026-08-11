@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SIMPkl API
+  title: SIMPKL API
   version: 1.0.0
   description: Backend API for practical work placement management in schools and educational institutions.
 servers:
@@ -175,8 +175,15 @@ paths:
     get:
       tags: [Reports]
       security: [{bearerAuth: []}]
-      summary: Ringkasan dashboard
-      responses: {"200": {description: Statistik dashboard}}
+      summary: Pusat operasional dashboard PKL
+      description: Mengembalikan ringkasan periode, prioritas, agenda, kesiapan administrasi, kapasitas, progres jurusan, dan aktivitas audit terbaru. Tanpa `period_id`, sistem menggunakan periode aktif terbaru.
+      parameters:
+        - name: period_id
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+          description: ID periode PKL yang ingin ditinjau.
+      responses: {"200": {description: Ringkasan operasional dashboard PKL}}
   /reports/placements:
     get:
       tags: [Reports]

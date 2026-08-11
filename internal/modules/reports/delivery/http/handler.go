@@ -16,7 +16,10 @@ type Handler struct{ service *reportservice.Service }
 func NewHandler(service *reportservice.Service) *Handler { return &Handler{service} }
 
 func (h *Handler) Dashboard(c *gin.Context) {
-	result, err := h.service.Dashboard(c.Request.Context(), c.Query("period_id"))
+	result, err := h.service.Dashboard(c.Request.Context(), c.Query("period_id"), map[string]string{
+		"major_id": c.GetString("scope_major_id"),
+		"class_id": c.GetString("scope_class_id"),
+	})
 	if err != nil {
 		response.InternalError(c)
 		return
