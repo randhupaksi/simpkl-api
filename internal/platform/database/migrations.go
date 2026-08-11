@@ -194,7 +194,7 @@ func applyMigration(ctx context.Context, db *sql.DB, migration migrationFile) er
 	return nil
 }
 
-// splitSQLStatements handles the migration subset used by SIMPkl: regular
+// splitSQLStatements handles the migration subset used by SIMPKL: regular
 // MySQL statements with semicolons ignored while inside quoted strings.
 func splitSQLStatements(source string) []string {
 	var statements []string

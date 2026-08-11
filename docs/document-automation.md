@@ -1,6 +1,6 @@
 # Document Automation
 
-SIMPkl turns verified placement data into official PKL administration files.
+SIMPKL turns verified placement data into official PKL administration files.
 The engine is deterministic and does not use generative AI for official values.
 
 ## Outputs

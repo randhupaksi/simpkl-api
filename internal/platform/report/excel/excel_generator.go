@@ -24,7 +24,7 @@ func (Generator) Generate(sheetName string, headers []string, rows [][]any) ([]b
 	_ = workbook.MergeCell(sheetName, "A1", lastColumn+"1")
 	_ = workbook.MergeCell(sheetName, "A2", lastColumn+"2")
 	_ = workbook.MergeCell(sheetName, "A3", lastColumn+"3")
-	_ = workbook.SetCellValue(sheetName, "A1", "SIMPkl | PRACTICAL WORK PLACEMENT")
+	_ = workbook.SetCellValue(sheetName, "A1", "SIMPKL | PRACTICAL WORK PLACEMENT")
 	_ = workbook.SetCellValue(sheetName, "A2", "Laporan Penempatan Praktik Kerja Lapangan")
 	_ = workbook.SetCellValue(sheetName, "A3", fmt.Sprintf("Dibuat %s  |  Total data: %d", formatGeneratedAt(), len(rows)))
 

@@ -82,7 +82,7 @@ func renderLetterPage(letter Letter) string {
 	if letter.Signatory.EmployeeNumber != "" {
 		pdfText(&out, signX, 57, 9, false, employeeLabel(letter.Signatory.EmployeeNumber))
 	}
-	pdfText(&out, 48, 28, 7.5, false, "Dokumen resmi dibuat melalui SIMPkl")
+	pdfText(&out, 48, 28, 7.5, false, "Dokumen resmi dibuat melalui SIMPKL")
 	return out.String()
 }
 

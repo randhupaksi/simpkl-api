@@ -21,7 +21,7 @@ func TestGenerateCreatesStyledReadableWorkbook(t *testing.T) {
 		t.Fatalf("open generated workbook: %v", err)
 	}
 	defer workbook.Close()
-	if got, _ := workbook.GetCellValue("Rekap PKL", "A1"); got != "SIMPkl | PRACTICAL WORK PLACEMENT" {
+	if got, _ := workbook.GetCellValue("Rekap PKL", "A1"); got != "SIMPKL | PRACTICAL WORK PLACEMENT" {
 		t.Fatalf("unexpected title: %q", got)
 	}
 	if got, _ := workbook.GetCellValue("Rekap PKL", "B6"); got != "Aulia Rahma Putri" {

@@ -1,6 +1,6 @@
-# SIMPkl API
+# SIMPKL API
 
-SIMPkl API is the backend service for a practical work placement management
+SIMPKL API is the backend service for a practical work placement management
 platform. It is designed for schools—especially vocational secondary schools
 (SMK)—and can also be adopted by other educational institutions that need to
 coordinate students, workplace partners, supervisors, placement administration,
@@ -91,7 +91,7 @@ previous_placement_id relationship.
 
 ## Architecture
 
-SIMPkl API follows a modular-monolith architecture. It keeps domain boundaries
+SIMPKL API follows a modular-monolith architecture. It keeps domain boundaries
 explicit while remaining straightforward to run and deploy as one service.
 
 ~~~text
@@ -320,7 +320,7 @@ Configure seed behavior in .env:
 SEED_ENABLED=true
 SEED_RECORD_COUNT=5
 SEED_RESET_LEGACY=true
-SEED_ADMIN_NAME=Super Admin SIMPkl
+SEED_ADMIN_NAME=Super Admin SIMPKL
 SEED_ADMIN_EMAIL=admin@example.sch.id
 SEED_ADMIN_USERNAME=superadmin
 SEED_ADMIN_PASSWORD=replace_with_at_least_8_characters
