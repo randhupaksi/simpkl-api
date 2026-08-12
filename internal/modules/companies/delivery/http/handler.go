@@ -8,6 +8,7 @@ import (
 
 	companyservice "simpkl-api/internal/modules/companies/service"
 	apperrors "simpkl-api/internal/shared/errors"
+	"simpkl-api/internal/shared/pagination"
 	"simpkl-api/internal/shared/response"
 )
 
@@ -42,10 +43,25 @@ func (h *Handler) MajorCapacities(c *gin.Context) {
 	response.Success(c, http.StatusOK, "Jurusan dan kuota perusahaan berhasil diambil", items, nil)
 }
 
+func (h *Handler) EligibleCompanies(c *gin.Context) {
+	var query pagination.Query
+	if err := c.ShouldBindQuery(&query); err != nil {
+		response.Error(c, http.StatusUnprocessableEntity, "Parameter daftar perusahaan tidak valid", "VALIDATION_ERROR", nil)
+		return
+	}
+
+	items, meta, err := h.partnerships.EligibleCompanies(c.Request.Context(), query, c.Query("student_id"))
+	if err != nil {
+		writeCompanyError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, "Perusahaan yang sesuai berhasil diambil", items, meta)
+}
+
 func writeCompanyError(c *gin.Context, err error) {
 	var appError *apperrors.AppError
 	if errors.As(err, &appError) {
-		response.Error(c, appError.Status, appError.Message, appError.Code, nil)
+		response.Error(c, appError.Status, appError.Message, appError.Code, appError.Errors)
 		return
 	}
 	response.InternalError(c)

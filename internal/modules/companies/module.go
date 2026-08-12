@@ -31,8 +31,9 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 	service := crud.NewService("company", repo, auditor, validate, nil)
 	handler := crud.NewHandler(service, "status", "industry", "city")
 	group := api.Group("/companies")
-	crud.RegisterRoutes(group, handler, require, "company")
 	partnerships := companyhttp.NewHandler(companyservice.NewPartnershipService(db))
+	group.GET("/eligible", require("company.view"), partnerships.EligibleCompanies)
 	group.GET("/:id/major-capacities", require("company.view"), partnerships.MajorCapacities)
 	group.PUT("/:id/major-capacities", require("company.update"), partnerships.SetMajorCapacities)
+	crud.RegisterRoutes(group, handler, require, "company")
 }
