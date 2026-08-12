@@ -66,6 +66,7 @@ func (s *PartnershipService) EligibleCompanies(
 	ctx context.Context,
 	query pagination.Query,
 	studentID string,
+	selectedCompanyID string,
 ) ([]entity.Company, pagination.Meta, error) {
 	query.Normalize()
 	statement := s.db.WithContext(ctx).Model(&entity.Company{})
@@ -88,15 +89,27 @@ func (s *PartnershipService) EligibleCompanies(
 			}
 		}
 
-		statement = statement.Where(`
-			NOT EXISTS (
-				SELECT 1 FROM company_major_capacities configured
-				WHERE configured.company_id = companies.id
-			) OR EXISTS (
-				SELECT 1 FROM company_major_capacities accepted
-				WHERE accepted.company_id = companies.id AND accepted.major_id = ?
-			)
-		`, studentMajorID)
+		if selectedCompanyID != "" {
+			statement = statement.Where(`
+				companies.id = ? OR NOT EXISTS (
+					SELECT 1 FROM company_major_capacities configured
+					WHERE configured.company_id = companies.id
+				) OR EXISTS (
+					SELECT 1 FROM company_major_capacities accepted
+					WHERE accepted.company_id = companies.id AND accepted.major_id = ?
+				)
+			`, selectedCompanyID, studentMajorID)
+		} else {
+			statement = statement.Where(`
+				NOT EXISTS (
+					SELECT 1 FROM company_major_capacities configured
+					WHERE configured.company_id = companies.id
+				) OR EXISTS (
+					SELECT 1 FROM company_major_capacities accepted
+					WHERE accepted.company_id = companies.id AND accepted.major_id = ?
+				)
+			`, studentMajorID)
+		}
 	}
 
 	if query.Search != "" {

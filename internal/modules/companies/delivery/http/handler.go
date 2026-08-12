@@ -50,7 +50,12 @@ func (h *Handler) EligibleCompanies(c *gin.Context) {
 		return
 	}
 
-	items, meta, err := h.partnerships.EligibleCompanies(c.Request.Context(), query, c.Query("student_id"))
+	items, meta, err := h.partnerships.EligibleCompanies(
+		c.Request.Context(),
+		query,
+		c.Query("student_id"),
+		c.Query("company_id"),
+	)
 	if err != nil {
 		writeCompanyError(c, err)
 		return
