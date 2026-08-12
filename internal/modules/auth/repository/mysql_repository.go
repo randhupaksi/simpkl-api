@@ -23,7 +23,8 @@ func (r *MySQLRepository) FindByLogin(
 ) (*userentity.User, error) {
 	var user userentity.User
 	err := r.db.WithContext(ctx).
-		Where("(email = ? OR username = ?) AND status = ?", login, login, "active").
+		Table("users").
+		Where("(email = ? OR username = ?) AND status = ? AND deleted_at IS NULL", login, login, "active").
 		First(&user).Error
 	return &user, err
 }
