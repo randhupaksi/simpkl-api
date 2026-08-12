@@ -16,12 +16,12 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 		db,
 		[]string{"nis", "nisn", "name", "email", "phone"},
 		map[string]string{
-			"class_id": "class_id", "major_id": "major_id", "cohort": "cohort",
+			"class_id": "class_id", "major_id": "major_id",
 			"status": "status", "pkl_status": "pkl_status",
 		},
 	)
 	service := crud.NewService("student", repo, auditor, nil, nil)
-	handler := crud.NewHandler(service, "class_id", "major_id", "cohort", "status", "pkl_status")
+	handler := crud.NewHandler(service, "class_id", "major_id", "status", "pkl_status")
 	group := api.Group("/students")
 	crud.RegisterRoutes(group, handler, require, "student")
 	importer := studenthttp.NewHandler(studentservice.NewImportService(db))

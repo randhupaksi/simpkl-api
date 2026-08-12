@@ -11,7 +11,6 @@ type Student struct {
 	Gender      string `gorm:"size:20" json:"gender" validate:"omitempty,oneof=male female"`
 	ClassID     string `gorm:"type:char(36);not null;index" json:"class_id" validate:"required,uuid"`
 	MajorID     string `gorm:"type:char(36);not null;index" json:"major_id" validate:"required,uuid"`
-	Cohort      int    `gorm:"not null;index" json:"cohort" validate:"required,min=2000,max=2200"`
 	Phone       string `gorm:"size:30" json:"phone"`
 	Email       string `gorm:"size:150;index" json:"email" validate:"omitempty,email"`
 	Address     string `gorm:"type:text" json:"address"`

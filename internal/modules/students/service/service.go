@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/xuri/excelize/v2"
@@ -51,7 +50,7 @@ func (s *ImportService) Import(
 		return result, nil
 	}
 	headers := headerMap(rows[0])
-	required := []string{"nis", "name", "class_id", "major_id", "cohort"}
+	required := []string{"nis", "name", "class_id", "major_id"}
 	for _, column := range required {
 		if _, exists := headers[column]; !exists {
 			return nil, fmt.Errorf("kolom %s wajib tersedia", column)
@@ -117,11 +116,10 @@ func parseStudent(row []string, headers map[string]int, rowNumber int) (entity.S
 		}
 		return strings.TrimSpace(row[index])
 	}
-	cohort, cohortErr := strconv.Atoi(value("cohort"))
 	student := entity.Student{
 		NIS: value("nis"), NISN: value("nisn"), Name: value("name"),
 		Nickname: value("nickname"), Gender: strings.ToLower(value("gender")),
-		ClassID: value("class_id"), MajorID: value("major_id"), Cohort: cohort,
+		ClassID: value("class_id"), MajorID: value("major_id"),
 		Phone: value("phone"), Email: strings.ToLower(value("email")),
 		Address: value("address"), ParentName: value("parent_name"),
 		ParentPhone: value("parent_phone"), Status: "active", PKLStatus: "unplaced",
@@ -133,9 +131,6 @@ func parseStudent(row []string, headers map[string]int, rowNumber int) (entity.S
 		if fieldValue == "" {
 			errors = append(errors, ImportRowError{rowNumber, field, "Wajib diisi"})
 		}
-	}
-	if cohortErr != nil || cohort < 2000 || cohort > 2200 {
-		errors = append(errors, ImportRowError{rowNumber, "cohort", "Tahun angkatan tidak valid"})
 	}
 	return student, errors
 }

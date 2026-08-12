@@ -31,9 +31,6 @@ func (s *Service) Dashboard(ctx context.Context, periodID string, scopes map[str
 	result.Period = period.dashboardPeriod()
 
 	studentQuery := scopedStudents(s.db.WithContext(ctx).Table("students s").Where("s.deleted_at IS NULL"), scopes)
-	if period.ID != "" {
-		studentQuery = studentQuery.Where("s.cohort = ?", period.Cohort)
-	}
 	if err := studentQuery.Count(&result.TotalStudents).Error; err != nil {
 		return nil, err
 	}
@@ -169,9 +166,6 @@ func dashboardStatuses(students *gorm.DB) []entity.DashboardBreakdown {
 
 func (s *Service) dashboardMajorProgress(ctx context.Context, period dashboardPeriodRecord, scopes map[string]string) []entity.DashboardMajor {
 	query := scopedStudents(s.db.WithContext(ctx).Table("students s").Joins("JOIN majors m ON m.id = s.major_id AND m.deleted_at IS NULL").Where("s.deleted_at IS NULL"), scopes)
-	if period.ID != "" {
-		query = query.Where("s.cohort = ?", period.Cohort)
-	}
 	items := make([]entity.DashboardMajor, 0)
 	_ = query.Select(`m.id AS major_id, m.name AS major_name, COUNT(s.id) AS total_students,
 		SUM(CASE WHEN s.pkl_status NOT IN ('unplaced', 'unregistered', 'placement_process', 'not_participating', 'cancelled') THEN 1 ELSE 0 END) AS placed_students,
