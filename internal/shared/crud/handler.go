@@ -71,7 +71,7 @@ func (h *Handler[T]) Create(c *gin.Context) {
 		return
 	}
 	if err := validation.Validator.Struct(input); err != nil {
-		writeError(c, err)
+		writeValidationError(c, err, input)
 		return
 	}
 	item, err := h.service.Create(c.Request.Context(), &input, auditEvent(c))
@@ -89,7 +89,7 @@ func (h *Handler[T]) Update(c *gin.Context) {
 		return
 	}
 	if err := validation.Validator.Struct(input); err != nil {
-		writeError(c, err)
+		writeValidationError(c, err, input)
 		return
 	}
 	item, err := h.service.Update(
@@ -143,14 +143,18 @@ func auditEvent(c *gin.Context) types.AuditEvent {
 func writeError(c *gin.Context, err error) {
 	var appError *apperrors.AppError
 	if errors.As(err, &appError) {
-		response.Error(c, appError.Status, appError.Message, appError.Code, nil)
+		response.Error(c, appError.Status, appError.Message, appError.Code, appError.Errors)
 		return
 	}
+	response.Error(c, http.StatusUnprocessableEntity, "Format permintaan tidak dapat diproses", "VALIDATION_ERROR", map[string][]string{"request": {"Periksa kembali format data yang dikirim lalu coba lagi."}})
+}
+
+func writeValidationError[T any](c *gin.Context, err error, input T) {
 	response.Error(
 		c,
 		http.StatusUnprocessableEntity,
-		"Data tidak valid",
+		"Beberapa isian belum memenuhi ketentuan. Perbaiki bidang yang ditandai lalu simpan kembali.",
 		"VALIDATION_ERROR",
-		map[string][]string{"request": {err.Error()}},
+		validation.FieldErrors(err, input),
 	)
 }
