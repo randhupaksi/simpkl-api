@@ -167,10 +167,10 @@ func dashboardStatuses(students *gorm.DB) []entity.DashboardBreakdown {
 func (s *Service) dashboardMajorProgress(ctx context.Context, period dashboardPeriodRecord, scopes map[string]string) []entity.DashboardMajor {
 	query := scopedStudents(s.db.WithContext(ctx).Table("students s").Joins("JOIN majors m ON m.id = s.major_id AND m.deleted_at IS NULL").Where("s.deleted_at IS NULL"), scopes)
 	items := make([]entity.DashboardMajor, 0)
-	_ = query.Select(`m.id AS major_id, m.name AS major_name, COUNT(s.id) AS total_students,
+	_ = query.Select(`m.id AS major_id, m.code AS major_code, m.name AS major_name, COUNT(s.id) AS total_students,
 		SUM(CASE WHEN s.pkl_status NOT IN ('unplaced', 'unregistered', 'placement_process', 'not_participating', 'cancelled') THEN 1 ELSE 0 END) AS placed_students,
 		SUM(CASE WHEN s.pkl_status = 'active' THEN 1 ELSE 0 END) AS active_students`).
-		Group("m.id, m.name").Order("total_students DESC, m.name ASC").Scan(&items).Error
+		Group("m.id, m.code, m.name").Order("total_students DESC, m.name ASC").Scan(&items).Error
 	return items
 }
 

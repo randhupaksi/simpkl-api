@@ -49,6 +49,7 @@ type DashboardBreakdown struct {
 
 type DashboardMajor struct {
 	MajorID        string `json:"major_id"`
+	MajorCode      string `json:"major_code"`
 	MajorName      string `json:"major_name"`
 	TotalStudents  int64  `json:"total_students"`
 	PlacedStudents int64  `json:"placed_students"`
