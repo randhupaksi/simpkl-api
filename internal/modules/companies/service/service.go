@@ -8,6 +8,7 @@ import (
 
 	"simpkl-api/internal/modules/companies/entity"
 	apperrors "simpkl-api/internal/shared/errors"
+	"simpkl-api/internal/shared/pagination"
 )
 
 type PartnershipService struct{ db *gorm.DB }
@@ -56,4 +57,61 @@ func (s *PartnershipService) MajorCapacities(
 ) ([]entity.MajorCapacity, error) {
 	var result []entity.MajorCapacity
 	return result, s.db.WithContext(ctx).Where("company_id = ?", companyID).Find(&result).Error
+}
+
+// EligibleCompanies returns companies that can accept the selected student's major.
+// A company without configured major capacities is treated as accepting every major,
+// matching placement validation rules.
+func (s *PartnershipService) EligibleCompanies(
+	ctx context.Context,
+	query pagination.Query,
+	studentID string,
+) ([]entity.Company, pagination.Meta, error) {
+	query.Normalize()
+	statement := s.db.WithContext(ctx).Model(&entity.Company{})
+
+	if studentID != "" {
+		var studentMajorID string
+		result := s.db.WithContext(ctx).
+			Table("students").
+			Where("id = ? AND deleted_at IS NULL", studentID).
+			Pluck("major_id", &studentMajorID)
+		if result.Error != nil {
+			return nil, pagination.Meta{}, result.Error
+		}
+		if result.RowsAffected == 0 {
+			return nil, pagination.Meta{}, &apperrors.AppError{
+				Status:  http.StatusUnprocessableEntity,
+				Code:    "STUDENT_NOT_FOUND",
+				Message: "Siswa yang dipilih tidak ditemukan. Pilih siswa lain lalu coba lagi.",
+				Errors:  map[string][]string{"student_id": {"Siswa yang dipilih sudah tidak tersedia."}},
+			}
+		}
+
+		statement = statement.Where(`
+			NOT EXISTS (
+				SELECT 1 FROM company_major_capacities configured
+				WHERE configured.company_id = companies.id
+			) OR EXISTS (
+				SELECT 1 FROM company_major_capacities accepted
+				WHERE accepted.company_id = companies.id AND accepted.major_id = ?
+			)
+		`, studentMajorID)
+	}
+
+	if query.Search != "" {
+		statement = statement.Where("name LIKE ? OR industry LIKE ? OR city LIKE ?", "%"+query.Search+"%", "%"+query.Search+"%", "%"+query.Search+"%")
+	}
+
+	var total int64
+	if err := statement.Count(&total).Error; err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	var companies []entity.Company
+	if err := statement.Order("name ASC").Offset(query.Offset()).Limit(query.PerPage).Find(&companies).Error; err != nil {
+		return nil, pagination.Meta{}, err
+	}
+
+	return companies, pagination.NewMeta(query, total), nil
 }
