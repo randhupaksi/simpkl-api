@@ -6,6 +6,7 @@ type AppError struct {
 	Status  int
 	Code    string
 	Message string
+	Errors  map[string][]string
 	Cause   error
 }
 
