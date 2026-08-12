@@ -29,7 +29,7 @@ func (h *Handler) Transfer(c *gin.Context) {
 	if err != nil {
 		var appError *apperrors.AppError
 		if errors.As(err, &appError) {
-			response.Error(c, appError.Status, appError.Message, appError.Code, nil)
+			response.Error(c, appError.Status, appError.Message, appError.Code, appError.Errors)
 			return
 		}
 		response.InternalError(c)

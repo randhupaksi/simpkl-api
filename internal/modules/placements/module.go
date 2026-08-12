@@ -38,10 +38,10 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 	)
 	validate := func(ctx context.Context, existing *entity.Placement, placement *entity.Placement) error {
 		if !placement.EndDate.After(placement.StartDate) {
-			return invalidPlacement("INVALID_DATE_RANGE", "Tanggal selesai harus setelah tanggal mulai")
+			return invalidPlacement("INVALID_DATE_RANGE", "Tanggal selesai harus setelah tanggal mulai", "end_date", "Pilih tanggal selesai setelah tanggal mulai.")
 		}
 		if existing != nil && !placementTransitions[existing.Status][placement.Status] {
-			return &apperrors.AppError{Status: http.StatusConflict, Code: "INVALID_STATUS_TRANSITION", Message: "Perubahan status penempatan tidak diizinkan"}
+			return &apperrors.AppError{Status: http.StatusConflict, Code: "INVALID_STATUS_TRANSITION", Message: "Status penempatan tidak dapat diubah pada tahap ini", Errors: map[string][]string{"status": {"Gunakan alur status yang tersedia untuk melanjutkan penempatan."}}}
 		}
 		var period struct {
 			StartDate time.Time
@@ -49,17 +49,17 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 			Status    string
 		}
 		if err := db.WithContext(ctx).Table("periods").Select("start_date, end_date, status").Where("id = ? AND deleted_at IS NULL", placement.PeriodID).Take(&period).Error; err != nil {
-			return invalidPlacement("PERIOD_NOT_FOUND", "Periode PKL tidak ditemukan")
+			return invalidPlacement("PERIOD_NOT_FOUND", "Periode PKL yang dipilih tidak tersedia", "period_id", "Pilih periode PKL yang masih tersedia.")
 		}
 		if period.Status == "completed" || period.Status == "archived" {
-			return invalidPlacement("PERIOD_CLOSED", "Periode PKL sudah ditutup")
+			return invalidPlacement("PERIOD_CLOSED", "Periode PKL yang dipilih sudah ditutup", "period_id", "Pilih periode yang belum selesai atau belum diarsipkan.")
 		}
 		if placement.StartDate.Before(period.StartDate) || placement.EndDate.After(period.EndDate) {
-			return invalidPlacement("PLACEMENT_OUTSIDE_PERIOD", "Tanggal penempatan harus berada dalam rentang periode PKL")
+			return invalidPlacement("PLACEMENT_OUTSIDE_PERIOD", "Jadwal penempatan berada di luar rentang periode PKL", "end_date", "Sesuaikan tanggal mulai dan selesai agar berada dalam rentang periode yang dipilih.")
 		}
 		var studentCount int64
 		if err := db.WithContext(ctx).Table("students").Where("id = ? AND status = ? AND deleted_at IS NULL", placement.StudentID, "active").Count(&studentCount).Error; err != nil || studentCount == 0 {
-			return invalidPlacement("STUDENT_NOT_AVAILABLE", "Siswa tidak tersedia")
+			return invalidPlacement("STUDENT_NOT_AVAILABLE", "Siswa yang dipilih tidak tersedia untuk penempatan", "student_id", "Pilih siswa dengan status aktif.")
 		}
 		var studentMajorID string
 		if err := db.WithContext(ctx).Table("students").Where("id = ?", placement.StudentID).Pluck("major_id", &studentMajorID).Error; err != nil {
@@ -70,10 +70,10 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 			Capacity int
 		}
 		if err := db.WithContext(ctx).Table("companies").Select("status, capacity").Where("id = ? AND deleted_at IS NULL", placement.CompanyID).Take(&company).Error; err != nil {
-			return invalidPlacement("COMPANY_NOT_FOUND", "Perusahaan tidak ditemukan")
+			return invalidPlacement("COMPANY_NOT_FOUND", "Perusahaan yang dipilih tidak tersedia", "company_id", "Pilih perusahaan yang masih terdaftar.")
 		}
 		if company.Status == "blocked" || company.Status == "not_recommended" {
-			return invalidPlacement("COMPANY_NOT_ALLOWED", "Perusahaan tidak dapat digunakan untuk penempatan")
+			return invalidPlacement("COMPANY_NOT_ALLOWED", "Perusahaan ini tidak dapat digunakan untuk penempatan", "company_id", "Pilih perusahaan dengan status yang diizinkan untuk PKL.")
 		}
 		var configuredMajors int64
 		if err := db.WithContext(ctx).Table("company_major_capacities").Where("company_id = ?", placement.CompanyID).Count(&configuredMajors).Error; err != nil {
@@ -87,14 +87,14 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 			return err
 		}
 		if configuredMajors > 0 && majorQuery.RowsAffected == 0 && placement.OverrideReason == "" {
-			return &apperrors.AppError{Status: http.StatusConflict, Code: "MAJOR_NOT_ACCEPTED", Message: "Jurusan siswa belum tercatat diterima perusahaan; alasan pengecualian wajib diisi"}
+			return invalidPlacement("MAJOR_NOT_ACCEPTED", "Jurusan siswa belum diterima oleh perusahaan ini", "company_id", "Pilih perusahaan yang menerima jurusan siswa tersebut atau gunakan proses pengecualian yang disetujui.")
 		}
 		if placement.CompanyContactID != "" {
 			var contactCount int64
 			if err := db.WithContext(ctx).Table("company_contacts").
 				Where("id = ? AND company_id = ? AND deleted_at IS NULL", placement.CompanyContactID, placement.CompanyID).
 				Count(&contactCount).Error; err != nil || contactCount == 0 {
-				return invalidPlacement("INVALID_COMPANY_CONTACT", "PIC tidak terdaftar pada perusahaan yang dipilih")
+				return invalidPlacement("INVALID_COMPANY_CONTACT", "PIC tidak terdaftar pada perusahaan yang dipilih", "company_contact_id", "Pilih PIC yang terdaftar pada perusahaan tersebut, atau kosongkan jika belum ada.")
 			}
 		}
 		if placement.SupervisorID != "" {
@@ -106,7 +106,7 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 				Select("status, max_students").
 				Where("id = ? AND deleted_at IS NULL", placement.SupervisorID).
 				Take(&supervisor).Error; err != nil || supervisor.Status != "active" {
-				return invalidPlacement("SUPERVISOR_NOT_AVAILABLE", "Guru pembimbing tidak tersedia")
+				return invalidPlacement("SUPERVISOR_NOT_AVAILABLE", "Guru pembimbing tidak tersedia", "supervisor_id", "Pilih guru pembimbing dengan status aktif, atau kosongkan untuk ditentukan kemudian.")
 			}
 			var supervised int64
 			query := db.WithContext(ctx).Table("placements").
@@ -118,7 +118,7 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 				return err
 			}
 			if supervisor.MaxStudents > 0 && supervised >= int64(supervisor.MaxStudents) && placement.OverrideReason == "" {
-				return &apperrors.AppError{Status: http.StatusConflict, Code: "SUPERVISOR_CAPACITY_EXCEEDED", Message: "Beban guru pembimbing sudah penuh; alasan pengecualian wajib diisi"}
+				return invalidPlacement("SUPERVISOR_CAPACITY_EXCEEDED", "Beban siswa guru pembimbing sudah penuh", "supervisor_id", "Pilih guru pembimbing lain yang masih memiliki kapasitas.")
 			}
 		}
 		var duplicate int64
@@ -128,7 +128,7 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 			query = query.Where("id <> ?", existing.ID)
 		}
 		if err := query.Count(&duplicate).Error; err != nil || duplicate > 0 {
-			return &apperrors.AppError{Status: http.StatusConflict, Code: "ACTIVE_PLACEMENT_EXISTS", Message: "Siswa sudah memiliki penempatan aktif pada periode ini"}
+			return invalidPlacement("ACTIVE_PLACEMENT_EXISTS", "Siswa sudah memiliki penempatan aktif pada periode ini", "student_id", "Gunakan data penempatan yang ada atau proses transfer bila lokasi perlu diubah.")
 		}
 		if company.Capacity > 0 {
 			var used int64
@@ -141,7 +141,7 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 				return err
 			}
 			if used >= int64(company.Capacity) && placement.OverrideReason == "" {
-				return &apperrors.AppError{Status: http.StatusConflict, Code: "COMPANY_CAPACITY_EXCEEDED", Message: "Kuota perusahaan sudah penuh; alasan pengecualian wajib diisi"}
+				return invalidPlacement("COMPANY_CAPACITY_EXCEEDED", "Kuota perusahaan untuk periode ini sudah penuh", "company_id", "Pilih perusahaan lain yang masih memiliki kuota.")
 			}
 		}
 		if majorCapacity > 0 {
@@ -156,7 +156,7 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 				return err
 			}
 			if usedByMajor >= int64(majorCapacity) && placement.OverrideReason == "" {
-				return &apperrors.AppError{Status: http.StatusConflict, Code: "MAJOR_CAPACITY_EXCEEDED", Message: "Kuota perusahaan untuk jurusan siswa sudah penuh; alasan pengecualian wajib diisi"}
+				return invalidPlacement("MAJOR_CAPACITY_EXCEEDED", "Kuota perusahaan untuk jurusan siswa ini sudah penuh", "company_id", "Pilih perusahaan lain yang masih memiliki kuota untuk jurusan siswa.")
 			}
 		}
 		return nil
@@ -177,6 +177,11 @@ func Register(api *gin.RouterGroup, db *gorm.DB, auditor types.Auditor, require 
 	group.POST("/:id/transfer", require("placement.transfer"), transferHandler.Transfer)
 }
 
-func invalidPlacement(code, message string) error {
-	return &apperrors.AppError{Status: http.StatusUnprocessableEntity, Code: code, Message: message}
+func invalidPlacement(code, message, field, fieldMessage string) error {
+	return &apperrors.AppError{
+		Status:  http.StatusUnprocessableEntity,
+		Code:    code,
+		Message: message,
+		Errors:  map[string][]string{field: {fieldMessage}},
+	}
 }
