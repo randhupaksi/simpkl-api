@@ -263,6 +263,12 @@ func (s *Service) Preview(ctx context.Context, filters Filters, templateCodes []
 		return nil, err
 	}
 	issues := s.validate(ctx, placements, templateCodes)
+	if issues == nil {
+		issues = make([]ValidationIssue, 0)
+	}
+	if placements == nil {
+		placements = make([]PlacementData, 0)
+	}
 	count := 0
 	for _, code := range unique(templateCodes) {
 		if code == "placement_recap" {
@@ -485,7 +491,7 @@ func (s *Service) placements(ctx context.Context, filters Filters) ([]PlacementD
 	if len(filters.PlacementIDs) > 0 {
 		query = query.Where("p.id IN ?", filters.PlacementIDs)
 	}
-	var rows []PlacementData
+	rows := make([]PlacementData, 0)
 	return rows, query.Order("students.name ASC").Scan(&rows).Error
 }
 
