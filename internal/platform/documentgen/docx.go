@@ -67,27 +67,34 @@ func documentXML(letter Letter) string {
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:body>` + body.String() + `<w:sectPr>
-<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1417" w:header="720" w:footer="720"/>
+	<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="720" w:footer="720"/>
 <w:cols w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr></w:body></w:document>`
 }
 
 func infoTable(letter Letter) string {
 	rows := [][2]string{{"Nomor", letter.Number}, {"Lampiran", "-"}, {"Perihal", letter.Subject}}
 	var result strings.Builder
-	result.WriteString(`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr>`)
 	for _, row := range rows {
-		result.WriteString(`<w:tr><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/></w:tcPr>` + paragraph(row[0], false, 22, "left", 0, 0) + `</w:tc><w:tc><w:tcPr><w:tcW w:w="250" w:type="dxa"/></w:tcPr>` + paragraph(":", false, 22, "left", 0, 0) + `</w:tc><w:tc>` + paragraph(row[1], row[0] == "Perihal", 22, "left", 0, 0) + `</w:tc></w:tr>`)
+		result.WriteString(tabbedField(row[0], row[1], row[0] == "Perihal"))
 	}
-	result.WriteString(`</w:tbl>`)
 	return result.String()
 }
 
 func signatureTable(letter Letter) string {
 	cityDate := strings.Trim(strings.Join(nonEmpty([]string{letter.Profile.City, letter.Date}), ", "), " ,")
-	return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr><w:tr><w:tc><w:tcPr><w:tcW w:w="4800" w:type="dxa"/></w:tcPr><w:p/></w:tc><w:tc><w:tcPr><w:tcW w:w="4200" w:type="dxa"/></w:tcPr>` +
-		paragraph(cityDate, false, 22, "left", 0, 0) + paragraph(letter.Signatory.Title, false, 22, "left", 0, 0) +
-		`<w:p><w:pPr><w:spacing w:after="1050"/></w:pPr></w:p>` + paragraph(letter.Signatory.Name, true, 22, "left", 0, 0) +
-		paragraph(employeeLabel(letter.Signatory.EmployeeNumber), false, 20, "left", 0, 0) + `</w:tc></w:tr></w:tbl>`
+	return paragraph(cityDate, false, 22, "right", 0, 0) +
+		paragraph(letter.Signatory.Title, false, 22, "right", 0, 0) +
+		`<w:p><w:pPr><w:spacing w:after="1050"/></w:pPr></w:p>` +
+		paragraph(letter.Signatory.Name, true, 22, "right", 0, 0) +
+		paragraph(employeeLabel(letter.Signatory.EmployeeNumber), false, 20, "right", 0, 0)
+}
+
+func tabbedField(label, value string, bold bool) string {
+	weight := ""
+	if bold {
+		weight = `<w:b/>`
+	}
+	return fmt.Sprintf(`<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="1700"/><w:tab w:val="left" w:pos="1950"/></w:tabs><w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t>%s</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>:</w:t></w:r><w:r><w:tab/></w:r><w:r><w:rPr>%s<w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">%s</w:t></w:r></w:p>`, xmlEscape(label), weight, xmlEscape(value))
 }
 
 func paragraph(value string, bold bool, size int, align string, firstLine, after int) string {
