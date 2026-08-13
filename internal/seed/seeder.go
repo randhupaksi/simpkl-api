@@ -19,6 +19,7 @@ import (
 	documententity "simpkl-api/internal/modules/documents/entity"
 	majorentity "simpkl-api/internal/modules/majors/entity"
 	periodentity "simpkl-api/internal/modules/periods/entity"
+	permissionentity "simpkl-api/internal/modules/permissions/entity"
 	placemententity "simpkl-api/internal/modules/placements/entity"
 	readinessentity "simpkl-api/internal/modules/readiness/entity"
 	roleentity "simpkl-api/internal/modules/roles/entity"
@@ -63,11 +64,11 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 		if err != nil {
 			return err
 		}
-		majors, err := seedMajors(tx, 5)
+		majors, err := seedMajors(tx, 6)
 		if err != nil {
 			return err
 		}
-		classes, err := seedClasses(tx, majors, 10)
+		classes, err := seedClasses(tx, majors, 12)
 		if err != nil {
 			return err
 		}
@@ -75,7 +76,7 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 		if err != nil {
 			return err
 		}
-		periods, err := seedPeriods(tx, 2)
+		periods, err := seedPeriods(tx, 3)
 		if err != nil {
 			return err
 		}
@@ -83,11 +84,11 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 		if err != nil {
 			return err
 		}
-		companies, err := seedCompanies(tx, majors, 12)
+		companies, err := seedCompanies(tx, majors, 6)
 		if err != nil {
 			return err
 		}
-		contacts, err := seedContacts(tx, companies, 12)
+		contacts, err := seedContacts(tx, companies, 6)
 		if err != nil {
 			return err
 		}
@@ -121,11 +122,11 @@ func Run(ctx context.Context, db *gorm.DB, options Options) error {
 
 func seedDocumentAutomation(tx *gorm.DB) error {
 	profile := automationentity.SchoolProfile{
-		InstitutionName: "SMK Nusantara Teknologi", InstitutionType: "Sekolah Menengah Kejuruan",
-		NPSN: "20260001", Address: "Jl. Pendidikan No. 10", District: "Sukmajaya",
-		City: "Depok", Province: "Jawa Barat", PostalCode: "16412", Phone: "(021) 7700000",
-		Email: "info@smknusantarateknologi.sch.id", Website: "https://smknusantarateknologi.sch.id",
-		LetterheadTagline: "Terampil, Profesional, dan Berintegritas", Timezone: "Asia/Jakarta",
+		InstitutionName: "SMK Citra Negara Depok", InstitutionType: "Sekolah Menengah Kejuruan",
+		NPSN: "20232537", Address: "Jl. Raya Tanah Baru No. 99, Kemiri Jaya", Village: "Kemiri Jaya", District: "Beji",
+		City: "Depok", Province: "Jawa Barat", PostalCode: "16421", Phone: "(021) 77201052",
+		Email: "info@citranegara.sch.id", Website: "https://smk.citranegara.sch.id",
+		LetterheadTagline: "Religius, Disiplin, dan Terampil", Timezone: "Asia/Jakarta",
 	}
 	var existingProfile automationentity.SchoolProfile
 	if err := tx.First(&existingProfile).Error; errors.Is(err, gorm.ErrRecordNotFound) {
@@ -134,29 +135,32 @@ func seedDocumentAutomation(tx *gorm.DB) error {
 		}
 	} else if err != nil {
 		return fmt.Errorf("find school profile: %w", err)
-	} else if existingProfile.InstitutionName == "Nama Institusi" {
+	} else if strings.TrimSpace(existingProfile.InstitutionName) == "" || strings.TrimSpace(existingProfile.Address) == "" || existingProfile.InstitutionName == "Nama Institusi" || existingProfile.InstitutionName == "SMK Nusantara Teknologi" {
 		profile.ID = existingProfile.ID
 		if err := tx.Model(&existingProfile).Updates(profile).Error; err != nil {
 			return fmt.Errorf("update placeholder school profile: %w", err)
 		}
 	}
 
-	signatory := automationentity.Signatory{Name: "Drs. Ahmad Fauzi, M.Pd.", Title: "Kepala Sekolah", EmployeeNumber: "19750512 200501 1 001", RoleCode: "principal", IsDefault: true, Status: "active"}
+	signatory := automationentity.Signatory{Name: "Abdul Kodir Zaelani, S.Pd.I.", Title: "Kepala Sekolah", EmployeeNumber: "", RoleCode: "principal", IsDefault: true, Status: "active"}
 	var existingSignatory automationentity.Signatory
-	if err := tx.Where("is_default = ?", true).Order("created_at ASC").First(&existingSignatory).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := tx.Where("name = ? AND role_code = ?", signatory.Name, signatory.RoleCode).First(&existingSignatory).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		if err := tx.Create(&signatory).Error; err != nil {
 			return fmt.Errorf("seed signatory: %w", err)
 		}
+		existingSignatory = signatory
 	} else if err != nil {
-		return fmt.Errorf("find default signatory: %w", err)
-	} else if existingSignatory.Name == "Nama Kepala Sekolah" {
-		if err := tx.Model(&existingSignatory).Updates(map[string]any{
-			"name": signatory.Name, "title": signatory.Title,
-			"employee_number": signatory.EmployeeNumber, "role_code": signatory.RoleCode,
-			"is_default": true, "status": signatory.Status,
-		}).Error; err != nil {
-			return fmt.Errorf("update placeholder signatory: %w", err)
-		}
+		return fmt.Errorf("find signatory: %w", err)
+	}
+	if err := tx.Model(&automationentity.Signatory{}).Where("is_default = ?", true).Update("is_default", false).Error; err != nil {
+		return fmt.Errorf("clear default signatories: %w", err)
+	}
+	if err := tx.Model(&existingSignatory).Updates(map[string]any{
+		"name": signatory.Name, "title": signatory.Title,
+		"employee_number": signatory.EmployeeNumber, "role_code": signatory.RoleCode,
+		"is_default": true, "status": signatory.Status,
+	}).Error; err != nil {
+		return fmt.Errorf("activate default signatory: %w", err)
 	}
 
 	templates := []automationentity.DocumentTemplate{
@@ -184,7 +188,12 @@ func cleanupLegacyFixtures(tx *gorm.DB) error {
 	if err := tx.Unscoped().Where("nis LIKE ?", "SEED%").Find(&oldStudents).Error; err != nil {
 		return fmt.Errorf("find legacy students: %w", err)
 	}
-	if err := tx.Unscoped().Where("name LIKE ?", "Mitra Industri Seed%").Find(&oldCompanies).Error; err != nil {
+	if err := tx.Unscoped().Where("name LIKE ? OR name IN ?", "Mitra Industri Seed%", []string{
+		"CV Beji Solusi Digital", "PT Margonda Teknologi Kreatif", "CV Depok Network Center",
+		"PT Citra Aplikasi Nusantara", "Studio Visual Kukusan", "CV Arsip Bisnis Depok",
+		"PT Layanan Data Margonda", "Toko Komputer Tanah Baru", "CV Promosi Kreatif Beji",
+		"PT Ritel Sejahtera Depok", "CV Kantor Digital Kemiri Jaya", "Hotel Mitra Depok",
+	}).Find(&oldCompanies).Error; err != nil {
 		return fmt.Errorf("find legacy companies: %w", err)
 	}
 	if err := tx.Unscoped().Where("name LIKE ?", "PKL Seed%").Find(&oldPeriods).Error; err != nil {
@@ -214,6 +223,17 @@ func cleanupLegacyFixtures(tx *gorm.DB) error {
 			return fmt.Errorf("delete legacy archives: %w", err)
 		}
 	}
+	if len(companyIDs) > 0 {
+		if err := tx.Unscoped().Where("company_id IN ?", companyIDs).Delete(&placemententity.Placement{}).Error; err != nil {
+			return fmt.Errorf("delete legacy placements by company: %w", err)
+		}
+		if err := tx.Unscoped().Where("company_id IN ?", companyIDs).Delete(&contactentity.CompanyContact{}).Error; err != nil {
+			return fmt.Errorf("delete legacy company contacts: %w", err)
+		}
+		if err := tx.Unscoped().Where("company_id IN ?", companyIDs).Delete(&companyentity.MajorCapacity{}).Error; err != nil {
+			return fmt.Errorf("delete legacy company capacities: %w", err)
+		}
+	}
 	if err := tx.Unscoped().Where("number LIKE ?", "DOC-SEED-%").Delete(&documententity.Document{}).Error; err != nil {
 		return fmt.Errorf("delete legacy documents: %w", err)
 	}
@@ -225,11 +245,6 @@ func cleanupLegacyFixtures(tx *gorm.DB) error {
 	}
 	if err := tx.Unscoped().Where("employee_number LIKE ?", "GURU-SEED-%").Delete(&supervisorentity.Supervisor{}).Error; err != nil {
 		return fmt.Errorf("delete legacy supervisors: %w", err)
-	}
-	if len(companyIDs) > 0 {
-		if err := tx.Unscoped().Where("company_id IN ?", companyIDs).Delete(&companyentity.MajorCapacity{}).Error; err != nil {
-			return fmt.Errorf("delete legacy company capacities: %w", err)
-		}
 	}
 	if len(userIDs) > 0 {
 		if err := tx.Unscoped().Where("user_id IN ?", userIDs).Delete(&roleentity.UserRole{}).Error; err != nil {
@@ -315,6 +330,17 @@ func seedRoles(tx *gorm.DB) (map[string]roleentity.Role, error) {
 		}
 		result[code] = role
 	}
+	var wildcard permissionentity.Permission
+	if err := tx.Where("code = ?", "*").First(&wildcard).Error; err != nil {
+		return nil, fmt.Errorf("find wildcard permission: %w; run RBAC migrations first", err)
+	}
+	superAdmin := result["super_admin"]
+	if err := tx.Model(&superAdmin).Update("status", "active").Error; err != nil {
+		return nil, fmt.Errorf("activate super admin role: %w", err)
+	}
+	if err := tx.Where("role_id = ? AND permission_id = ?", superAdmin.ID, wildcard.ID).FirstOrCreate(&permissionentity.RolePermission{RoleID: superAdmin.ID, PermissionID: wildcard.ID}).Error; err != nil {
+		return nil, fmt.Errorf("repair super admin permissions: %w", err)
+	}
 	return result, nil
 }
 
@@ -323,16 +349,17 @@ func seedMajors(tx *gorm.DB, count int) ([]majorentity.Major, error) {
 	programs := []struct {
 		code, name, abbreviation, description string
 	}{
-		{"CN-PPLG", "Pengembangan Perangkat Lunak dan Gim", "PPLG", "Pengembangan aplikasi, website, basis data, dan gim."},
-		{"CN-TJKT", "Teknik Jaringan Komputer dan Telekomunikasi", "TJKT", "Instalasi jaringan, perangkat komputer, dan dukungan teknis."},
-		{"CN-PM", "Pemasaran", "PM", "Penjualan, layanan pelanggan, promosi, dan pengelolaan kanal pemasaran."},
-		{"CN-MPLB", "Manajemen Perkantoran dan Layanan Bisnis", "MPLB", "Administrasi perkantoran, pengarsipan, dan layanan bisnis."},
-		{"CN-DKV", "Desain Komunikasi Visual", "DKV", "Desain grafis, konten visual, fotografi, dan produksi media."},
+		{"CN-TJKT", "Teknik Jaringan Komputer dan Telekomunikasi", "TJKT", "Instalasi jaringan, fiber optik, perangkat komputer, keamanan jaringan, dan dukungan teknis."},
+		{"CN-PPLG", "Pengembangan Perangkat Lunak dan Gim", "PPLG", "Analisis kebutuhan, pengembangan aplikasi, website, basis data, gim, dan pengujian perangkat lunak."},
+		{"CN-DKV", "Desain Komunikasi Visual", "DKV", "Desain grafis, fotografi, produksi konten, branding, dan komunikasi visual digital."},
+		{"CN-PH", "Perhotelan", "PH", "Layanan akomodasi, tata graha, pelayanan tamu, front office, dan operasional hospitality."},
+		{"CN-MPLB", "Manajemen Perkantoran dan Layanan Bisnis", "MPLB", "Administrasi perkantoran, pengarsipan, input data, layanan publik, dan pengelolaan dokumen."},
+		{"CN-PM", "Pemasaran", "PM", "Penjualan, layanan pelanggan, promosi, pemasaran digital, dan pengelolaan kanal bisnis."},
 	}
 	for i := range majors {
 		program := programs[i%len(programs)]
-		item := majorentity.Major{Code: program.code, Name: program.name, Abbreviation: program.abbreviation, HeadName: []string{"Nina Suryani, S.Kom.", "Arif Hidayat, S.Kom.", "Maya Kartika, S.Pd.", "Budi Santoso, S.E.", "Laras Wulandari, S.Sn."}[i%5], Status: "active", Description: program.description}
-		if err := tx.Where("code = ?", item.Code).FirstOrCreate(&item).Error; err != nil {
+		item := majorentity.Major{Code: program.code, Name: program.name, Abbreviation: program.abbreviation, HeadName: "", Status: "active", Description: program.description}
+		if err := tx.Where("code = ?", item.Code).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed major %d: %w", i+1, err)
 		}
 		majors[i] = item
@@ -345,7 +372,7 @@ func seedClasses(tx *gorm.DB, majors []majorentity.Major, count int) ([]classent
 	for i := range classes {
 		major := majors[i%len(majors)]
 		item := classentity.Class{Name: fmt.Sprintf("XII %s %d", major.Abbreviation, i/len(majors)+1), Level: 12, MajorID: major.ID, HomeroomTeacher: []string{"Rina Kurniawati, S.Pd.", "Dedi Hermawan, S.Pd.", "Siti Maemunah, S.Pd.", "Agus Setiawan, S.Pd."}[i%4], AcademicYear: "2026/2027", Status: "active"}
-		if err := tx.Where("name = ? AND academic_year = ?", item.Name, item.AcademicYear).FirstOrCreate(&item).Error; err != nil {
+		if err := tx.Where("name = ? AND academic_year = ?", item.Name, item.AcademicYear).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed class %d: %w", i+1, err)
 		}
 		classes[i] = item
@@ -390,11 +417,12 @@ func seedPeriods(tx *gorm.DB, count int) ([]periodentity.Period, error) {
 	}{
 		{"PKL Semester Genap 2025/2026", "2025/2026", "even", time.Date(2026, 1, 5, 0, 0, 0, 0, time.Local), time.Date(2026, 6, 30, 0, 0, 0, 0, time.Local), 2025, "completed"},
 		{"PKL Semester Ganjil 2026/2027", "2026/2027", "odd", time.Date(2026, 7, 13, 0, 0, 0, 0, time.Local), time.Date(2026, 12, 19, 0, 0, 0, 0, time.Local), 2026, "active"},
+		{"PKL Semester Ganjil 2027/2028", "2027/2028", "odd", time.Date(2027, 7, 12, 0, 0, 0, 0, time.Local), time.Date(2027, 12, 18, 0, 0, 0, 0, time.Local), 2027, "active"},
 	}
 	for i := range periods {
 		definition := periodDefinitions[i%len(periodDefinitions)]
-		item := periodentity.Period{Name: definition.name, AcademicYear: definition.academicYear, Semester: definition.semester, StartDate: definition.start, EndDate: definition.end, Cohort: definition.cohort, Status: definition.status, Notes: "Synthetic practical work placement period for local development and demonstration."}
-		if err := tx.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+		item := periodentity.Period{Name: definition.name, AcademicYear: definition.academicYear, Semester: definition.semester, StartDate: definition.start, EndDate: definition.end, Cohort: definition.cohort, Status: definition.status, Notes: "Fixture lokal SIMPKL untuk simulasi pengelolaan PKL SMK Citra Negara Depok."}
+		if err := tx.Where("name = ?", item.Name).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed period %d: %w", i+1, err)
 		}
 		periods[i] = item
@@ -407,7 +435,7 @@ func seedStudents(tx *gorm.DB, majors []majorentity.Major, classes []classentity
 	names := []string{"Aditya Pratama", "Aisyah Nuraini", "Bagas Ramadhan", "Bella Maharani", "Cahyo Nugroho", "Citra Lestari", "Daffa Alfarizi", "Dinda Permata", "Fajar Maulana", "Farah Nabila", "Galang Saputra", "Hana Fitriani", "Iqbal Maulana", "Intan Safitri", "Jovan Kurniawan", "Keisya Amalia", "M. Rizky Firmansyah", "Nadia Putri", "Oka Wijaya", "Putri Ayuningtyas", "Rafi Hidayat", "Salma Azzahra", "Tegar Firmansyah", "Ulfa Rahmawati", "Vino Adiputra", "Wahyu Setiawan", "Yasmin Khairunnisa", "Zaki Pranata", "Andika Saputra", "Novi Lestari"}
 	for i := range students {
 		item := studententity.Student{NIS: fmt.Sprintf("2627%04d", i+1), NISN: fmt.Sprintf("0068%08d", i+1), Name: names[i%len(names)], Nickname: strings.Split(names[i%len(names)], " ")[0], Gender: []string{"male", "female"}[i%2], ClassID: classes[i%len(classes)].ID, MajorID: majors[i%len(majors)].ID, Phone: fmt.Sprintf("081200000%03d", i+1), Email: fmt.Sprintf("siswa.%d@example.sch.id", i+1), Address: fmt.Sprintf("Jl. Raya Tanah Baru No. %d, Beji, Depok", 12+i), ParentName: fmt.Sprintf("Orang Tua %s", names[i%len(names)]), ParentPhone: fmt.Sprintf("081300000%03d", i+1), Status: "active", PKLStatus: []string{"active", "active", "ready", "awaiting_documents"}[i%4], Notes: "Data siswa sintetis untuk simulasi administrasi PKL."}
-		if err := tx.Where("nis = ?", item.NIS).FirstOrCreate(&item).Error; err != nil {
+		if err := tx.Where("nis = ?", item.NIS).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed student %d: %w", i+1, err)
 		}
 		students[i] = item
@@ -417,15 +445,29 @@ func seedStudents(tx *gorm.DB, majors []majorentity.Major, classes []classentity
 
 func seedCompanies(tx *gorm.DB, majors []majorentity.Major, count int) ([]companyentity.Company, error) {
 	companies := make([]companyentity.Company, count)
-	names := []string{"CV Beji Solusi Digital", "PT Margonda Teknologi Kreatif", "CV Depok Network Center", "PT Citra Aplikasi Nusantara", "Studio Visual Kukusan", "CV Arsip Bisnis Depok", "PT Layanan Data Margonda", "Toko Komputer Tanah Baru", "CV Promosi Kreatif Beji", "PT Ritel Sejahtera Depok", "CV Kantor Digital Kemiri Jaya", "Hotel Mitra Depok"}
-	industries := []string{"Software House", "Teknologi Informasi", "Jaringan Komputer", "Pengembangan Aplikasi", "Desain dan Produksi Media", "Administrasi Bisnis", "Teknologi Informasi", "Perdagangan Komputer", "Periklanan dan Kreatif", "Ritel", "Layanan Perkantoran", "Perhotelan"}
+	definitions := []struct {
+		name, businessType, industry, description, address, district, city, postalCode, website, notes string
+		status                                                                                         string
+		capacity                                                                                       int
+		majorIndexes                                                                                   []int
+	}{
+		{"Fakultas Ilmu Komputer Universitas Indonesia", "Perguruan tinggi", "Pendidikan tinggi dan teknologi informasi", "Lokasi PKL yang terdokumentasi untuk siswa SMK Citra Negara pada bidang administrasi perkantoran di lingkungan Fasilkom UI.", "Kampus UI, Depok", "Beji", "Depok", "16424", "https://cs.ui.ac.id", "Tercatat sebagai pengalaman PKL siswa SMK Citra Negara dalam publikasi Fasilkom UI; bukan klaim bahwa seluruh program studi menerima PKL setiap periode.", "active", 12, []int{0, 1, 4}},
+		{"Sakubi Teknologi Indonesia", "PT", "Teknologi pendidikan dan layanan bisnis", "Perusahaan teknologi yang menjadi lokasi PKL siswa MPLB SMK Citra Negara pada laporan kegiatan tahun 2025.", "Kampus UI, Depok", "Beji", "Depok", "16424", "", "Tercatat sebagai instansi pada laporan PKL siswa SMK Citra Negara tahun 2025; detail PIC tidak dipublikasikan.", "active", 10, []int{1, 4}},
+		{"PT Propertree Investa Cendekia", "PT", "Teknologi finansial dan properti", "Perusahaan teknologi finansial yang menjadi salah satu lokasi PKL siswa DKV SMK Citra Negara pada laporan tahun 2025.", "Jl. K.H.M. Yusuf Raya, Mekar Jaya", "Sukmajaya", "Depok", "16418", "", "Tercatat sebagai lokasi PKL siswa DKV SMK Citra Negara pada laporan kegiatan publik; detail PIC tidak dipublikasikan.", "active", 8, []int{1, 2, 4}},
+		{"Raden Village", "Unit usaha", "Properti dan layanan hunian", "Lingkungan usaha properti di Pancoran Mas yang menjadi lokasi PKL siswa DKV SMK Citra Negara pada laporan tahun 2025.", "Jl. Al-Muttaqin, RT 003/RW 008", "Pancoran Mas", "Depok", "16434", "", "Tercatat sebagai lokasi PKL siswa DKV SMK Citra Negara pada laporan kegiatan publik; detail PIC tidak dipublikasikan.", "active", 8, []int{2, 3, 4, 5}},
+		{"PT CQU Executive Business Training Centre", "PT", "Pelatihan bisnis dan pengembangan profesional", "Pusat pelatihan bisnis yang menjadi salah satu lokasi PKL siswa DKV SMK Citra Negara pada laporan tahun 2025.", "Mall Kuningan City LG Unit 24-25, Jl. Prof. Dr. Satrio Kav. 18", "Setiabudi", "Jakarta Selatan", "12940", "", "Tercatat sebagai lokasi PKL siswa DKV SMK Citra Negara pada laporan kegiatan publik; detail PIC tidak dipublikasikan.", "active", 8, []int{2, 4, 5}},
+		{"PT Lencana Gaya Indonesia", "PT", "Manufaktur garmen dan industri kreatif", "Rumah produksi kreatif bidang pakaian dan mode yang menjadi lokasi PKL siswa DKV SMK Citra Negara pada 2024.", "Jl. Siliwangi No. 1", "Pancoran Mas", "Depok", "16431", "", "Tercatat sebagai lokasi PKL siswa DKV SMK Citra Negara pada laporan kegiatan 2024; detail PIC tidak dipublikasikan.", "active", 8, []int{2, 4, 5}},
+	}
 	for i := range companies {
-		item := companyentity.Company{Name: names[i%len(names)], BusinessType: []string{"PT", "CV"}[i%2], Industry: industries[i%len(industries)], Description: "Perusahaan dummy di sekitar Depok/Jakarta untuk simulasi penempatan PKL.", Address: fmt.Sprintf("Jl. %s No. %d", []string{"Raya Tanah Baru", "Margonda Raya", "Kukusan Teknik", "Kemiri Jaya"}[i%4], 10+i), District: []string{"Beji", "Kukusan", "Kemiri Muka", "Pancoran Mas"}[i%4], City: "Depok", Province: "Jawa Barat", PostalCode: "16421", Phone: fmt.Sprintf("021700000%02d", i+1), Email: fmt.Sprintf("mitra.%d@example.com", i+1), Website: fmt.Sprintf("https://mitra-pkl-%d.example.com", i+1), MapsURL: "https://maps.google.com", Status: "active", Capacity: 10 + i%3*5, Notes: "Perusahaan dummy; bukan data mitra resmi sekolah."}
+		definition := definitions[i%len(definitions)]
+		item := companyentity.Company{Name: definition.name, BusinessType: definition.businessType, Industry: definition.industry, Description: definition.description, Address: definition.address, District: definition.district, City: definition.city, Province: "Jawa Barat", PostalCode: definition.postalCode, Website: definition.website, Status: definition.status, Capacity: definition.capacity, Notes: definition.notes}
 		if err := tx.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed company %d: %w", i+1, err)
 		}
-		if err := tx.Where("company_id = ? AND major_id = ?", item.ID, majors[i%len(majors)].ID).FirstOrCreate(&companyentity.MajorCapacity{CompanyID: item.ID, MajorID: majors[i%len(majors)].ID, Capacity: 10}).Error; err != nil {
-			return nil, fmt.Errorf("seed company capacity %d: %w", i+1, err)
+		for _, majorIndex := range definition.majorIndexes {
+			if err := tx.Where("company_id = ? AND major_id = ?", item.ID, majors[majorIndex].ID).FirstOrCreate(&companyentity.MajorCapacity{CompanyID: item.ID, MajorID: majors[majorIndex].ID, Capacity: 4}).Error; err != nil {
+				return nil, fmt.Errorf("seed company capacity %d/%d: %w", i+1, majorIndex, err)
+			}
 		}
 		companies[i] = item
 	}
@@ -434,10 +476,10 @@ func seedCompanies(tx *gorm.DB, majors []majorentity.Major, count int) ([]compan
 
 func seedContacts(tx *gorm.DB, companies []companyentity.Company, count int) ([]contactentity.CompanyContact, error) {
 	contacts := make([]contactentity.CompanyContact, count)
-	names := []string{"Nadia Permatasari", "Rizal Maulana", "Dewi Lestari", "Hendra Wijaya", "Salsa Aulia", "Fikri Ramadhan", "Mira Anggraini", "Dimas Prakoso", "Rani Oktaviani", "Yoga Firmansyah", "Tika Maharani", "Adit Kurniawan"}
+	roles := []string{"Sekretariat PKL Fasilkom UI", "Koordinator PKL Sakubi", "Koordinator PKL Propertree", "Pengelola Raden Village", "Student Engagement CQU", "Pembimbing Instansi Lencana"}
 	for i := range contacts {
-		item := contactentity.CompanyContact{CompanyID: companies[i%len(companies)].ID, Name: names[i%len(names)], Position: []string{"HR & General Affairs", "IT Support Lead", "Marketing Coordinator", "Office Manager"}[i%4], Division: []string{"Human Resources", "Information Technology", "Marketing", "Administration"}[i%4], Phone: fmt.Sprintf("081400000%03d", i+1), Email: fmt.Sprintf("pic.%d@example.com", i+1), IsPrimary: true, Notes: "Kontak PIC dummy untuk simulasi komunikasi PKL."}
-		if err := tx.Where("email = ?", item.Email).FirstOrCreate(&item).Error; err != nil {
+		item := contactentity.CompanyContact{CompanyID: companies[i%len(companies)].ID, Name: roles[i%len(roles)], Position: "Koordinator penerimaan PKL", Division: "Hubungan industri", Email: fmt.Sprintf("pic.seed.%d@example.sch.id", i+1), IsPrimary: true, Notes: "Placeholder operasional untuk demo lokal; nama dan kontak PIC resmi tidak dipublikasikan pada sumber yang digunakan."}
+		if err := tx.Where("email = ?", item.Email).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed company contact %d: %w", i+1, err)
 		}
 		contacts[i] = item
@@ -447,10 +489,10 @@ func seedContacts(tx *gorm.DB, companies []companyentity.Company, count int) ([]
 
 func seedSupervisors(tx *gorm.DB, majors []majorentity.Major, count int) ([]supervisorentity.Supervisor, error) {
 	supervisors := make([]supervisorentity.Supervisor, count)
-	names := []string{"Rina Kurniawati, S.Pd.", "Dedi Hermawan, S.Kom.", "Siti Maemunah, S.Pd.", "Agus Setiawan, S.E.", "Novi Rahmawati, S.Sn.", "Yusuf Hidayat, S.Kom.", "Maya Kartika, S.Pd.", "Bambang Prasetyo, S.E."}
+	names := []string{"Muhammad Fajar Sidiq, S.E.", "Syta Choirunnisa, S.Kom.", "Dewi Halimah Shoolihah, S.Ds.", "Neneng Supartiwi, S.Pd., M.M.", "Nurhakim Wirasena, S.I.Kom.", "Riki Yakub, S.Kom., Gr.", "Deni Romandono, S.T.", "Decky Riyansyah, M.Kom."}
 	for i := range supervisors {
 		item := supervisorentity.Supervisor{EmployeeNumber: fmt.Sprintf("CN-GPKL-%03d", i+1), Name: names[i%len(names)], Phone: fmt.Sprintf("081500000%03d", i+1), Email: fmt.Sprintf("pembimbing.%d@example.sch.id", i+1), MajorID: majors[i%len(majors)].ID, Position: "Guru Pembimbing PKL", Status: "active", MaxStudents: 20}
-		if err := tx.Where("employee_number = ?", item.EmployeeNumber).FirstOrCreate(&item).Error; err != nil {
+		if err := tx.Where("employee_number = ?", item.EmployeeNumber).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return nil, fmt.Errorf("seed supervisor %d: %w", i+1, err)
 		}
 		supervisors[i] = item
@@ -459,16 +501,36 @@ func seedSupervisors(tx *gorm.DB, majors []majorentity.Major, count int) ([]supe
 }
 
 func seedPlacements(tx *gorm.DB, periods []periodentity.Period, students []studententity.Student, companies []companyentity.Company, contacts []contactentity.CompanyContact, supervisors []supervisorentity.Supervisor, count int) ([]placemententity.Placement, error) {
-	placements := make([]placemententity.Placement, count)
-	currentPeriod := periods[len(periods)-1]
-	divisions := []string{"Web Development", "Technical Support", "Digital Marketing", "Administrasi", "Desain Konten"}
-	positions := []string{"Junior Web Developer", "Junior Technical Support", "Marketing Assistant", "Staff Administrasi", "Desain Grafis Junior"}
-	for i := range placements {
-		item := placemententity.Placement{PeriodID: currentPeriod.ID, StudentID: students[i%len(students)].ID, CompanyID: companies[i%len(companies)].ID, CompanyContactID: contacts[i%len(contacts)].ID, SupervisorID: supervisors[i%len(supervisors)].ID, Division: divisions[i%len(divisions)], Position: positions[i%len(positions)], WorkSystem: []string{"wfo", "hybrid", "wfo", "hybrid"}[i%4], Address: companies[i%len(companies)].Address, StartDate: currentPeriod.StartDate, EndDate: currentPeriod.EndDate, Status: []string{"active", "active", "ready", "pending_verification"}[i%4], Source: []string{"school", "teacher_recommendation", "self_submission"}[i%3], Notes: "Penempatan PKL aktif sintetis untuk tahun ajaran 2026/2027."}
-		if err := tx.Omit("PreviousPlacementID").Where("student_id = ? AND period_id = ?", item.StudentID, item.PeriodID).FirstOrCreate(&item).Error; err != nil {
-			return nil, fmt.Errorf("seed placement %d: %w", i+1, err)
+	placements := make([]placemententity.Placement, 0, count)
+	placementPeriods := periods
+	currentPeriodID := periods[len(periods)-1].ID
+	// Setiap pola siswa memakai satu perusahaan berbeda. Urutan ini menjaga
+	// kombinasi jurusan dan perusahaan tetap sesuai kapasitas yang diseed,
+	// sekaligus memastikan setiap perusahaan bisa diuji dari document automation.
+	companyByMajor := []int{0, 1, 4, 3, 2, 5}
+	divisions := []string{"Administrasi dan layanan akademik", "Administrasi dan teknologi bisnis", "Desain dan konten visual", "Layanan operasional properti", "Administrasi perkantoran", "Pemasaran dan layanan pelanggan"}
+	positions := []string{"Staf administrasi PKL", "Asisten administrasi digital", "Desainer konten junior", "Asisten layanan operasional", "Staf pengarsipan dan input data", "Asisten pemasaran"}
+	for periodIndex, period := range placementPeriods {
+		for i := 0; i < count; i++ {
+			majorIndex := i % 6
+			companyIndex := companyByMajor[majorIndex]
+			status := []string{"active", "active", "ready", "pending_verification", "approved", "ready"}[i%6]
+			switch period.Status {
+			case "completed", "archived":
+				status = "completed"
+			case "draft":
+				status = "draft"
+			case "preparation":
+				status = "pending_verification"
+			}
+			item := placemententity.Placement{PeriodID: period.ID, StudentID: students[i%len(students)].ID, CompanyID: companies[companyIndex].ID, CompanyContactID: contacts[companyIndex].ID, SupervisorID: supervisors[majorIndex%len(supervisors)].ID, Division: divisions[majorIndex], Position: positions[majorIndex], WorkSystem: []string{"wfo", "hybrid", "wfo", "wfo", "hybrid", "wfo"}[majorIndex], Address: companies[companyIndex].Address, StartDate: period.StartDate, EndDate: period.EndDate, Status: status, Source: []string{"school", "teacher_recommendation", "self_submission"}[i%3], Notes: "Fixture lokal berbasis konteks PKL SMK Citra Negara Depok; verifikasi lapangan diperlukan untuk penggunaan nyata."}
+			if err := tx.Omit("PreviousPlacementID").Where("student_id = ? AND period_id = ?", item.StudentID, item.PeriodID).Assign(item).FirstOrCreate(&item).Error; err != nil {
+				return nil, fmt.Errorf("seed placement %d/%d: %w", periodIndex+1, i+1, err)
+			}
+			if period.ID == currentPeriodID {
+				placements = append(placements, item)
+			}
 		}
-		placements[i] = item
 	}
 	return placements, nil
 }
