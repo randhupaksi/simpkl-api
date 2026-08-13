@@ -36,29 +36,26 @@ func PDF(letter Letter) ([]byte, error) {
 
 func renderLetterPage(letter Letter) string {
 	var out strings.Builder
-	centerPDF(&out, 595, 798, 11, true, strings.ToUpper(letter.Profile.Type))
-	centerPDF(&out, 595, 779, 16, true, strings.ToUpper(letter.Profile.Name))
+	centerPDF(&out, 595, 801, 10, true, strings.ToUpper(letter.Profile.Type))
+	centerPDF(&out, 595, 783, 15, true, strings.ToUpper(letter.Profile.Name))
 	if letter.Profile.Tagline != "" {
-		centerPDF(&out, 595, 763, 9, false, letter.Profile.Tagline)
+		centerPDF(&out, 595, 767, 8, false, letter.Profile.Tagline)
 	}
-	centerPDF(&out, 595, 749, 8, false, strings.Join(nonEmpty([]string{letter.Profile.Address, contactLine(letter.Profile)}), " | "))
-	out.WriteString("q 0.086 0.502 0.361 RG 1.5 w 48 738 m 547 738 l S Q\n")
-	out.WriteString("q 0.086 0.502 0.361 RG 0.5 w 48 734 m 547 734 l S Q\n")
-	y := 710.0
-	pdfText(&out, 52, y, 10, false, "Nomor")
-	pdfText(&out, 118, y, 10, false, ": "+letter.Number)
-	y -= 16
-	pdfText(&out, 52, y, 10, false, "Lampiran")
-	pdfText(&out, 118, y, 10, false, ": -")
-	y -= 16
-	pdfText(&out, 52, y, 10, false, "Perihal")
-	pdfText(&out, 118, y, 10, true, ": "+letter.Subject)
-	y -= 34
-	pdfText(&out, 52, y, 10, false, "Yth. "+fallback(letter.Recipient, "Pimpinan Perusahaan/Instansi"))
+	centerPDF(&out, 595, 753, 7, false, strings.Join(nonEmpty([]string{letter.Profile.Address, contactLine(letter.Profile)}), " | "))
+	out.WriteString("q 0.086 0.502 0.361 RG 1.4 w 52 740 m 543 740 l S Q\n")
+	out.WriteString("q 0.086 0.502 0.361 RG 0.5 w 52 736 m 543 736 l S Q\n")
+	y := 708.0
+	fieldPDF(&out, 60, 132, y, "Nomor", letter.Number, false)
+	y -= 17
+	fieldPDF(&out, 60, 132, y, "Lampiran", "-", false)
+	y -= 17
+	fieldPDF(&out, 60, 132, y, "Perihal", letter.Subject, true)
+	y -= 32
+	pdfText(&out, 60, y, 10, false, "Yth. "+fallback(letter.Recipient, "Pimpinan Perusahaan/Instansi"))
 	y -= 16
 	if letter.RecipientAddress != "" {
-		pdfText(&out, 52, y, 10, false, "di "+letter.RecipientAddress)
-		y -= 26
+		pdfText(&out, 60, y, 10, false, "di "+letter.RecipientAddress)
+		y -= 24
 	}
 	for _, paragraph := range strings.Split(strings.ReplaceAll(letter.Body, "\r\n", "\n"), "\n") {
 		paragraph = strings.TrimSpace(paragraph)
@@ -66,8 +63,12 @@ func renderLetterPage(letter Letter) string {
 			y -= 8
 			continue
 		}
-		for _, line := range wrapText(paragraph, 88) {
-			pdfText(&out, 68, y, 10, false, line)
+		for lineIndex, line := range wrapText(paragraph, 82) {
+			x := 60.0
+			if lineIndex == 0 {
+				x = 86
+			}
+			pdfText(&out, x, y, 10, false, line)
 			y -= 15
 		}
 		y -= 3
@@ -75,7 +76,7 @@ func renderLetterPage(letter Letter) string {
 			break
 		}
 	}
-	signX := 350.0
+	signX := 355.0
 	pdfText(&out, signX, 155, 10, false, strings.Trim(strings.Join(nonEmpty([]string{letter.Profile.City, letter.Date}), ", "), " ,"))
 	pdfText(&out, signX, 139, 10, false, letter.Signatory.Title)
 	pdfText(&out, signX, 72, 10, true, letter.Signatory.Name)
@@ -84,6 +85,14 @@ func renderLetterPage(letter Letter) string {
 	}
 	pdfText(&out, 48, 28, 7.5, false, "Dokumen resmi dibuat melalui SIMPKL")
 	return out.String()
+}
+
+func fieldPDF(out *strings.Builder, labelX, valueX, y float64, label, value string, bold bool) {
+	pdfText(out, labelX, y, 10, false, label)
+	pdfText(out, valueX, y, 10, false, ":")
+	for index, line := range wrapText(value, 62) {
+		pdfText(out, valueX+12, y-float64(index*14), 10, bold, line)
+	}
 }
 
 func pdfText(out *strings.Builder, x, y, size float64, bold bool, value string) {
