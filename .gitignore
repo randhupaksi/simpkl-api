@@ -30,3 +30,9 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Runtime-generated private documents and temporary files
+/storage/private/*
+/storage/temp/*
+!/storage/private/.gitkeep
+!/storage/temp/.gitkeep
