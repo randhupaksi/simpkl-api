@@ -14,6 +14,7 @@ import (
 	"simpkl-api/internal/platform/database"
 	platformlogger "simpkl-api/internal/platform/logger"
 	"simpkl-api/internal/platform/storage"
+	seed "simpkl-api/internal/seed"
 	"simpkl-api/internal/shared/types"
 )
 
@@ -49,6 +50,23 @@ func BuildDependencies(ctx context.Context) (*Dependencies, error) {
 			_ = log.Sync()
 			return nil, fmt.Errorf("apply database migrations: %w", err)
 		}
+	}
+	if cfg.Seed.Enabled {
+		if cfg.App.Env.IsProduction() {
+			_ = connection.Close()
+			_ = log.Sync()
+			return nil, fmt.Errorf("SEED_ENABLED=true tidak boleh digunakan pada APP_ENV=production")
+		}
+		if err := seed.Run(ctx, connection.GORM, seed.Options{
+			RecordCount: cfg.Seed.RecordCount, ResetLegacy: cfg.Seed.ResetLegacy,
+			AdminName: cfg.Seed.AdminName, AdminEmail: cfg.Seed.AdminEmail,
+			AdminUsername: cfg.Seed.AdminUsername, AdminPassword: cfg.Seed.AdminPassword,
+		}); err != nil {
+			_ = connection.Close()
+			_ = log.Sync()
+			return nil, fmt.Errorf("auto-seed data: %w", err)
+		}
+		log.Info("development fixture seed completed", zap.Bool("reset_legacy", cfg.Seed.ResetLegacy))
 	}
 
 	fileStorage, err := storage.NewLocal(cfg.Storage.Path)

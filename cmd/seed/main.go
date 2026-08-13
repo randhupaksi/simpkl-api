@@ -48,7 +48,7 @@ func loadSettings() *viper.Viper {
 	settings.SetConfigType("env")
 	settings.AddConfigPath(".")
 	settings.AutomaticEnv()
-	settings.SetDefault("SEED_ENABLED", false)
+	settings.SetDefault("SEED_ENABLED", true)
 	settings.SetDefault("SEED_RECORD_COUNT", 5)
 	settings.SetDefault("SEED_RESET_LEGACY", false)
 

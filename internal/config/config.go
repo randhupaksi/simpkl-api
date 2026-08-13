@@ -17,6 +17,7 @@ type Config struct {
 	CORS       CORSConfig
 	Storage    StorageConfig
 	Log        LogConfig
+	Seed       SeedConfig
 }
 
 type AppConfig struct {
@@ -59,6 +60,16 @@ type StorageConfig struct {
 
 type LogConfig struct {
 	Level string
+}
+
+type SeedConfig struct {
+	Enabled       bool
+	RecordCount   int
+	ResetLegacy   bool
+	AdminName     string
+	AdminEmail    string
+	AdminUsername string
+	AdminPassword string
 }
 
 func Load() (*Config, error) {
@@ -110,6 +121,15 @@ func Load() (*Config, error) {
 		},
 		Log: LogConfig{
 			Level: v.GetString("LOG_LEVEL"),
+		},
+		Seed: SeedConfig{
+			Enabled:       v.GetBool("SEED_ENABLED"),
+			RecordCount:   v.GetInt("SEED_RECORD_COUNT"),
+			ResetLegacy:   v.GetBool("SEED_RESET_LEGACY"),
+			AdminName:     v.GetString("SEED_ADMIN_NAME"),
+			AdminEmail:    v.GetString("SEED_ADMIN_EMAIL"),
+			AdminUsername: v.GetString("SEED_ADMIN_USERNAME"),
+			AdminPassword: v.GetString("SEED_ADMIN_PASSWORD"),
 		},
 	}
 
@@ -181,6 +201,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("STORAGE_DRIVER", "local")
 	v.SetDefault("STORAGE_PATH", "./storage/private")
 	v.SetDefault("LOG_LEVEL", "debug")
+	v.SetDefault("SEED_ENABLED", false)
+	v.SetDefault("SEED_RECORD_COUNT", 5)
+	v.SetDefault("SEED_RESET_LEGACY", false)
 }
 
 func splitAndTrim(value string) []string {

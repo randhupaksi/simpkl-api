@@ -1,8 +1,8 @@
 # SIMPKL API
 
 SIMPKL API is the backend service for a practical work placement management
-platform. It is designed for schools—especially vocational secondary schools
-(SMK)—and can also be adopted by other educational institutions that need to
+platform. It is designed for schools-especially vocational secondary schools
+(SMK)-and can also be adopted by other educational institutions that need to
 coordinate students, workplace partners, supervisors, placement administration,
 documents, readiness checks, reporting, and historical records.
 
@@ -15,31 +15,31 @@ operations portal.
 
 The backend exposes the following business areas:
 
-- **Authentication and sessions** — login, access-token refresh, logout, and the
+- **Authentication and sessions** - login, access-token refresh, logout, and the
   authenticated-user profile.
-- **Role-based access control** — users, roles, permissions, role assignment,
+- **Role-based access control** - users, roles, permissions, role assignment,
   permission assignment, and server-side authorization.
-- **Academic master data** — PKL periods, departments/majors, classes, and
+- **Academic master data** - PKL periods, departments/majors, classes, and
   students.
-- **Workplace partners** — companies, company contacts, cooperation metadata,
+- **Workplace partners** - companies, company contacts, cooperation metadata,
   capacity, and capacity by major.
-- **Supervision** — school supervisors, department assignment, status, and
+- **Supervision** - school supervisors, department assignment, status, and
   maximum student capacity.
-- **Placement management** — student/company/supervisor relationships, dates,
+- **Placement management** - student/company/supervisor relationships, dates,
   division, position, work system, status transitions, notes, and transfers.
-- **Administrative readiness** — readiness calculation, completion indicators,
+- **Administrative readiness** - readiness calculation, completion indicators,
   document-related checks, overrides, and placement progression support.
-- **Private document management** — document types, multipart upload, metadata,
+- **Private document management** - document types, multipart upload, metadata,
   verification, expiry information, secure download, version numbering, and
   superseding previous documents.
-- **Document automation** — configurable institution identity, signatories,
+- **Document automation** - configurable institution identity, signatories,
   versioned letter templates, collision-safe numbering, completeness previews,
   individual and batch generation, DOCX/PDF letters, XLSX recaps, ZIP packages,
   immutable data snapshots, checksums, and generation history.
-- **Reporting** — placement dashboard data and styled JSON, Excel, and PDF
+- **Reporting** - placement dashboard data and styled JSON, Excel, and PDF
   reports with human-readable status labels.
-- **Archiving** — period snapshots and administrative archive records.
-- **Auditability** — audit events for important administrative mutations.
+- **Archiving** - period snapshots and administrative archive records.
+- **Auditability** - audit events for important administrative mutations.
 
 ## Domain lifecycle
 
@@ -335,6 +335,10 @@ go run ./cmd/seed
 The fixture data is for local development and demonstration only. It must not
 be treated as real student, school, or company data.
 
+When `SEED_ENABLED=true`, `go run ./cmd/api` also runs the same idempotent
+fixture seeder during development/test startup. Production rejects this flag
+to prevent dummy data from entering a production database.
+
 ### Run the API
 
 ~~~powershell
@@ -383,13 +387,13 @@ security behavior, and the generation lifecycle.
 
 The complete safe template is in [.env.example](.env.example). Main groups are:
 
-- APP_* — service name, environment, port, and public URL.
-- DB_* — MySQL connection and pool settings.
-- JWT_* — access/refresh secrets and token lifetimes.
-- CORS_ALLOWED_ORIGINS — browser origins allowed to call the API.
-- STORAGE_* — private file-storage driver and path.
-- LOG_LEVEL — structured logging level.
-- SEED_* — local fixture and super-admin bootstrap behavior.
+- APP_* - service name, environment, port, and public URL.
+- DB_* - MySQL connection and pool settings.
+- JWT_* - access/refresh secrets and token lifetimes.
+- CORS_ALLOWED_ORIGINS - browser origins allowed to call the API.
+- STORAGE_* - private file-storage driver and path.
+- LOG_LEVEL - structured logging level.
+- SEED_* - local fixture and super-admin bootstrap behavior.
 
 Never expose JWT secrets, database passwords, or storage credentials in frontend
 variables or source control.
@@ -426,13 +430,13 @@ permission behavior, error shape, and affected frontend consumers.
 
 ## Documentation map
 
-- [docs/architecture.md](docs/architecture.md) — modular-monolith boundaries
+- [docs/architecture.md](docs/architecture.md) - modular-monolith boundaries
   and request flow.
-- [docs/api-conventions.md](docs/api-conventions.md) — response, pagination,
+- [docs/api-conventions.md](docs/api-conventions.md) - response, pagination,
   authentication, and status conventions.
-- [docs/database.md](docs/database.md) — schema relationships and lifecycle.
-- [docs/permissions.md](docs/permissions.md) — RBAC permission groups.
-- [docs/openapi.yaml](docs/openapi.yaml) — machine-readable API contract.
+- [docs/database.md](docs/database.md) - schema relationships and lifecycle.
+- [docs/permissions.md](docs/permissions.md) - RBAC permission groups.
+- [docs/openapi.yaml](docs/openapi.yaml) - machine-readable API contract.
 
 ## Scope and roadmap boundary
 
